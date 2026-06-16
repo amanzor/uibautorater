@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UIB Auto Rater</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="container">
+
+  <header>
+    <h1>UIB Auto Rater</h1>
+    <p>Universal Insurance Brokers &middot; Simulated Carrier Comparison</p>
+    <div class="nav-buttons">
+      <button class="btn-primary" data-view="quote">New Quote</button>
+      <button class="btn-secondary" data-view="compare">Comparison</button>
+      <button class="btn-success" data-view="settings">Carrier Connections</button>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- QUOTE ENTRY -->
+    <section id="view-quote" class="view active">
+      <h2 class="section-title">New Quote Entry</h2>
+      <p class="muted">Premiums shown are simulated placeholders, not real carrier quotes.</p>
+
+      <form id="quote-form">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Named Insured</label>
+            <input type="text" id="f-name" placeholder="Myriam Rivera" required>
+          </div>
+          <div class="form-group">
+            <label>ZIP Code</label>
+            <input type="text" id="f-zip" placeholder="33012" maxlength="5" required>
+          </div>
+          <div class="form-group">
+            <label>Date of Birth</label>
+            <input type="date" id="f-dob" required>
+          </div>
+          <div class="form-group">
+            <label>Years Licensed</label>
+            <input type="number" id="f-years" min="0" max="60" value="5" required>
+          </div>
+          <div class="form-group">
+            <label>Vehicle Year</label>
+            <input type="number" id="f-year" min="1990" max="2027" value="2021" required>
+          </div>
+          <div class="form-group">
+            <label>Vehicle Make / Model</label>
+            <input type="text" id="f-vehicle" placeholder="Dodge Charger SXT" required>
+          </div>
+          <div class="form-group">
+            <label>Liability Limits</label>
+            <select id="f-liab">
+              <option>10/20</option>
+              <option selected>25/50</option>
+              <option>50/100</option>
+              <option>100/300</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Comprehensive Deductible</label>
+            <select id="f-comp">
+              <option>No Coverage</option>
+              <option selected>500</option>
+              <option>1000</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Collision Deductible</label>
+            <select id="f-coll">
+              <option>No Coverage</option>
+              <option selected>500</option>
+              <option>1000</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Prior Bodily Injury Limits</label>
+            <select id="f-prior">
+              <option selected>None</option>
+              <option>25/50</option>
+              <option>50/100</option>
+              <option>100/300</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn-success">Rate Quote</button>
+          <button type="reset" class="btn-secondary">Clear</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- COMPARISON -->
+    <section id="view-compare" class="view">
+      <h2 class="section-title">Carrier Comparison</h2>
+
+      <div class="stats-grid" id="compare-stats" style="display:none;">
+        <div class="stat-card">
+          <h4>Best Rate</h4>
+          <div class="number" id="stat-best">$0</div>
+        </div>
+        <div class="stat-card">
+          <h4>Average Premium</h4>
+          <div class="number" id="stat-avg">$0</div>
+        </div>
+        <div class="stat-card">
+          <h4>Carriers Quoted</h4>
+          <div class="number" id="stat-count">0</div>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Carrier</th>
+              <th>Total Premium</th>
+              <th>Down Payment</th>
+              <th># Payments</th>
+              <th>Payment Amount</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="rate-table-body">
+            <tr><td colspan="6" class="muted center">Run a quote to see comparison results.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- CARRIER CONNECTIONS / FUTURE API HOOKUP -->
+    <section id="view-settings" class="view">
+      <h2 class="section-title">Carrier Connections</h2>
+      <p class="muted">
+        This site currently rates using a local simulation engine (<code>app.js → mockRate()</code>).
+        When you're ready to go live, plug each carrier's real-time rating API or EDI credentials in below —
+        no UI changes needed, just wire <code>fetchCarrierRate()</code> to call the real endpoints instead of <code>mockRate()</code>.
+      </p>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr><th>Carrier</th><th>Integration Type</th><th>Endpoint / Credentials</th><th>Status</th></tr>
+          </thead>
+          <tbody id="conn-table-body"></tbody>
+        </table>
+      </div>
+
+      <div class="form-actions">
+        <button id="add-carrier" class="btn-primary">+ Add Carrier Connection</button>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

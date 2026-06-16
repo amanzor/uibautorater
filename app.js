@@ -94,7 +94,11 @@ document.getElementById("quote-form").addEventListener("submit", async (e) => {
   const age = Math.max(16, new Date().getFullYear() - dob.getFullYear());
 
   const quote = {
-    name: document.getElementById("f-name").value,
+    firstName: document.getElementById("f-fname").value,
+    lastName: document.getElementById("f-lname").value,
+    street: document.getElementById("f-street").value,
+    city: document.getElementById("f-city").value,
+    state: document.getElementById("f-state").value,
     zip: document.getElementById("f-zip").value,
     age,
     yearsLicensed: Number(document.getElementById("f-years").value),
@@ -180,3 +184,46 @@ document.getElementById("add-carrier").addEventListener("click", () => {
 });
 
 renderCarrierConnections();
+
+// ---- Google Places address autocomplete ---------------------------------
+function initAddressAutocomplete() {
+  const status = document.getElementById("addr-status");
+  const streetEl = document.getElementById("f-street");
+  if (!window.google || !google.maps || !google.maps.places) {
+    if (status) status.textContent = "(address verification unavailable)";
+    return;
+  }
+
+  const ac = new google.maps.places.Autocomplete(streetEl, {
+    types: ["address"],
+    componentRestrictions: { country: "us" },
+    fields: ["address_components", "formatted_address"],
+  });
+
+  ac.addListener("place_changed", () => {
+    const place = ac.getPlace();
+    if (!place.address_components) {
+      status.textContent = "✗ Address not verified";
+      status.className = "addr-status addr-bad";
+      return;
+    }
+
+    let streetNumber = "", route = "", city = "", state = "", zip = "";
+    for (const c of place.address_components) {
+      if (c.types.includes("street_number")) streetNumber = c.long_name;
+      else if (c.types.includes("route")) route = c.long_name;
+      else if (c.types.includes("locality")) city = c.long_name;
+      else if (c.types.includes("administrative_area_level_1")) state = c.short_name;
+      else if (c.types.includes("postal_code")) zip = c.long_name;
+    }
+
+    streetEl.value = (streetNumber + " " + route).trim();
+    document.getElementById("f-city").value = city;
+    if (state) document.getElementById("f-state").value = state;
+    document.getElementById("f-zip").value = zip;
+
+    status.textContent = "✓ Verified";
+    status.className = "addr-status addr-ok";
+  });
+}
+window.initAddressAutocomplete = initAddressAutocomplete;

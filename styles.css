@@ -170,3 +170,18 @@ table tbody tr { transition: background 0.2s ease; }
 .badge-live { background: #ecfdf5; color: #047857; }
 
 code { background: #eef2f7; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+
+.addr-status { font-weight: 500; font-size: 12px; margin-left: 8px; }
+.addr-ok { color: #047857; }
+.addr-bad { color: #dc2626; }
+
+.pac-container {
+  border-radius: 6px;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  font-family: 'Segoe UI', Tahoma, sans-serif;
+  margin-top: 4px;
+}
+.pac-item { padding: 8px 12px; cursor: pointer; }
+.pac-item:hover { background: #f3f4ff; }
+.pac-item-selected { background: #ecebff; }

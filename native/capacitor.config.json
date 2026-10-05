@@ -3,7 +3,7 @@
   "appName": "MAX by UIB",
   "webDir": "www",
   "server": {
-    "url": "https://uib-binderbook.vercel.app/max/",
+    "url": "https://uib-binderbook.vercel.app/max",
     "cleartext": false
   },
   "ios": { "contentInset": "always", "backgroundColor": "#0d1f3c" },

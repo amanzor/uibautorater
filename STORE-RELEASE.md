@@ -7,13 +7,27 @@ lead is emailed to quotes@universalinsurancebroker.com and logged to the
 `max_leads` table. Auto dealers can sign up as referral partners from the
 same app.
 
-The web app is the product. The store apps in `native/` are thin native
-shells (Capacitor) that open the hosted web app, so every web deploy
-updates the store apps instantly with no new store submission.
+The store apps in `native/` are Capacitor apps with the web app **bundled
+inside** them (not a wrapper that loads the website), plus native features
+that Apple's guideline 4.2 "Minimum Functionality" looks for:
+
+- the phone's own camera and photo picker (`@capacitor/camera`) for the
+  license and VIN, orientation-corrected, nothing saved to the gallery;
+- haptic feedback when a document is read and when the lead is sent;
+- native splash screen and status bar, portrait lock, safe-area layout,
+  Android back-button handling;
+- opens offline (shows an offline notice; photos and sending need a
+  connection);
+- camera-permission texts in `Info.plist` and the Android manifest.
+
+Because the app is bundled, a store build is needed when `index.html`,
+`max.js` or `privacy.html` change (run `npm run build`, below, then
+archive again). The website at the same repository keeps deploying on its
+own and stays identical in behaviour.
 
 ## 0. Before anything else
 
-1. Deploy the web app: connect this repository to Vercel (Add New Project ▸ import ▸ framework "Other" ▸ no build command). The files assume the default address `https://uibautorater.vercel.app`; if Vercel gives you a different one (or you add your own domain) put it in `native/capacitor.config.json` as `server.url` and in `native/www/index.html`.
+1. Deploy the web app: connect this repository to Vercel (Add New Project ▸ import ▸ framework "Other" ▸ no build command). The store apps do not depend on this address (the app is bundled), but the privacy policy URL below does.
 2. Deploy the two Supabase functions (sources under `supabase/functions/`) and secrets (see README):
    `claude` (already deployed, reads the photos) and `inquiry` with
    `RESEND_API_KEY` (sends the lead emails). Without `inquiry`, the app
@@ -39,7 +53,7 @@ On a computer with [Android Studio](https://developer.android.com/studio) and No
 ```bash
 cd native
 npm install
-npx cap sync android
+npm run build               # copies the web app into native/www and syncs the plugins
 npx cap open android        # opens the project in Android Studio
 ```
 
@@ -63,42 +77,46 @@ with a 1024×1024 `native/assets/icon.png` (a copy of `icon.png` works) and
 
 ## 3. Build the iOS app (App Store)
 
-On a Mac with Xcode and CocoaPods:
+On a Mac with Xcode 15 or newer (the project uses Swift Package Manager,
+no CocoaPods needed):
 
 ```bash
 cd native
 npm install
-npx cap sync ios
-npx cap open ios            # opens App.xcworkspace in Xcode
+npm run build               # copies the web app into native/www and syncs the plugins
+npx cap open ios            # opens App.xcodeproj in Xcode
 ```
 
 In Xcode:
 
 1. Select the **App** target ▸ Signing & Capabilities ▸ your Apple team;
    bundle identifier `com.universalinsurancebrokers.max`.
-2. Add the camera usage text in `ios/App/App/Info.plist`:
-   `NSCameraUsageDescription` = "MAX uses the camera to photograph your
-   driver's license and VIN for your quote." (and
-   `NSPhotoLibraryUsageDescription` similarly).
+2. The camera and photo-library usage texts are already in
+   `ios/App/App/Info.plist`; edit the wording there if you like.
 3. Product ▸ Archive ▸ Distribute App ▸ App Store Connect ▸ Upload.
 4. In App Store Connect: create the app, add screenshots (6.7" and 6.1"
    iPhones), description, keywords, support URL, privacy policy URL, and the
    **App Privacy** answers (name, phone, email, photos, ID documents; linked
    to the user; used for app functionality). Submit for review (1–3 days).
 
-**Apple review note.** Apple rejects apps that are "just a website"
-(guideline 4.2). MAX is a camera-driven lead form with a clear native
-purpose, which normally passes, but to be safe mention in the review notes
-that the app captures documents with the camera and that the agency is a
-licensed Florida insurance agency. If Apple still asks for more native
-behaviour, the next step is to add the Capacitor Camera plugin so photos are
-taken through the native camera API; the web app already works unchanged.
+**Apple review notes (paste into App Store Connect ▸ App Review
+Information ▸ Notes).** Apple rejects apps that are only a repackaged
+website (guideline 4.2). Say this plainly: "MAX by UIB is a native
+Capacitor app for a licensed Florida insurance agency. It is bundled in the
+app (not a web wrapper), uses the device camera through the native camera
+API to capture a driver's license and VIN, provides haptic feedback and a
+native splash/status bar, and works offline. It collects a quote request
+that a licensed agent follows up by phone; no purchases are made in the
+app." Give the reviewer a test path: open the app, photograph any card and
+any VIN plate, enter a phone and email, send. The lead reaches the quotes@
+mailbox; reviewers' test leads can be ignored.
 
 ## 4. After launch
 
-- Updating the app's screens, wording or flow is a normal web deploy. Only
-  changes to `native/` (icon, name, permissions, plugins) need a new store
-  build.
+- The website updates on every deploy. The store apps carry their own copy
+  of the screens, so after changing `index.html`, `max.js` or
+  `privacy.html` run `npm run build` in `native/`, bump the version/build
+  number in Android Studio and Xcode, and upload a new build.
 - Leads arrive at quotes@universalinsurancebroker.com with the subject
   "New Lead (MAX app) – <name>" and dealer sign-ups as "New Dealer Sign-up –
   <name>". If the `max_leads` table exists they are stored there as well.

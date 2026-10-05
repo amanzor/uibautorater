@@ -8,8 +8,11 @@ when the `max_leads` table exists). Auto dealers can sign up as referral
 partners from the same app. MAX reads the photos with Claude Haiku 4.5.
 
 It is a web app (installable on phones from the browser) and the source
-of the App Store / Google Play apps in `native/`, which open the hosted
-site so every web deploy updates the store apps.
+of the App Store / Google Play apps in `native/`: Capacitor projects that
+bundle the same files and add the native camera, haptics, splash screen,
+status bar and offline start (see `STORE-RELEASE.md`). `max.js` detects
+the native shell at runtime, so one code base serves the site and both
+store apps.
 
 ## Deploy the web app
 
@@ -42,7 +45,7 @@ See `STORE-RELEASE.md`.
 | `privacy.html` | privacy policy |
 | `supabase/functions/claude`, `supabase/functions/inquiry` | photo reading and lead email functions |
 | `supabase-max-leads.sql` | optional leads table |
-| `native/` | Capacitor Android + iOS projects |
+| `native/` | Capacitor Android + iOS projects (`npm run build` bundles the web app into them) |
 | `vercel.json`, `.vercelignore` | hosting config |
 | `rater.html`, `rater.js`, `RATER-SETUP.md` | the agent Auto Rater at `/rater` |
 

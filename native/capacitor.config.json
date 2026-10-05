@@ -2,16 +2,26 @@
   "appId": "com.universalinsurancebrokers.max",
   "appName": "MAX by UIB",
   "webDir": "www",
-  "server": {
-    "url": "https://uibautorater.vercel.app/",
-    "cleartext": false
-  },
   "ios": {
-    "contentInset": "always",
-    "backgroundColor": "#0d1f3c"
+    "contentInset": "never",
+    "backgroundColor": "#0d1f3c",
+    "limitsNavigationsToAppBoundDomains": false
   },
   "android": {
     "backgroundColor": "#0d1f3c",
     "allowMixedContent": false
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchAutoHide": false,
+      "backgroundColor": "#0d1f3c",
+      "showSpinner": false,
+      "androidScaleType": "CENTER_CROP"
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#0d1f3c",
+      "overlaysWebView": false
+    }
   }
 }

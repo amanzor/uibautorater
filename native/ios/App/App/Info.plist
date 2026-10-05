@@ -43,6 +43,12 @@
       </array>
     </dict>
 	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>MAX uses the camera to photograph your driver's license and your vehicle's VIN so an agent can prepare your car insurance quote.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>MAX can read a license or VIN photo you already have in your library.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>MAX does not save photos to your library; this permission is only requested by the photo picker.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

@@ -36,6 +36,14 @@ own and stays identical in behaviour.
    lead is also stored in a table.
 4. Privacy policy URL for both stores: `https://uibautorater.vercel.app/privacy`.
 
+5. **Demo account for the reviewers.** The app requires a dealer login, and
+   both stores reject login-gated apps that come without test credentials.
+   In Supabase ▸ Authentication ▸ Users ▸ *Add user* create e.g.
+   `reviewer@universalinsurancebroker.com` with a password and tick
+   *Auto confirm user*; enter that email and password in App Store Connect
+   (App Review Information ▸ Sign-in required) and in Play Console (App
+   content ▸ App access ▸ "All or some functionality is restricted").
+
 ## 1. One-time accounts
 
 | Store | Account | Cost | Needs |
@@ -107,7 +115,8 @@ app (not a web wrapper), uses the device camera through the native camera
 API to capture a driver's license and VIN, provides haptic feedback and a
 native splash/status bar, and works offline. It collects a quote request
 that a licensed agent follows up by phone; no purchases are made in the
-app." Give the reviewer a test path: open the app, photograph any card and
+app. Dealer partners log in with the demo account provided." Give the
+reviewer a test path: log in with the demo account, photograph any card and
 any VIN plate, enter a phone and email, send. The lead reaches the quotes@
 mailbox; reviewers' test leads can be ignored.
 

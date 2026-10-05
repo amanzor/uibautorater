@@ -55,6 +55,14 @@
         .form input { width:100%; padding:12px 13px; border:1.5px solid var(--gray-200); border-radius:10px; font-family:inherit; font-size:16px; }
         .form input:focus { outline:none; border-color: var(--blue-light); box-shadow:0 0 0 3px rgba(59,130,246,.15); }
         .form .err { color: var(--red); font-size:13px; font-weight:600; }
+        .form .ok-note { background:#ecfdf5; border:1px solid #a7f3d0; color:#065f46; border-radius:10px; padding:10px 12px; font-size:13.5px; line-height:1.45; }
+        .form .links { display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; font-size:13.5px; margin-top:2px; }
+        .form .links a { color: var(--blue); font-weight:600; text-decoration:none; }
+        .form .terms { background: var(--gray-50); border:1px solid var(--gray-200); border-radius:10px; padding:10px 12px; font-size:12.5px; line-height:1.45; color: var(--gray-700); }
+        .form .terms b { color: var(--navy); }
+        .form .terms p { font-size:12.5px; color: var(--gray-700); margin:6px 0 0; }
+        .form .ack { display:flex; gap:10px; align-items:flex-start; font-size:13px; color: var(--gray-700); font-weight:500; }
+        .form .ack input { width:20px; height:20px; flex:0 0 20px; margin-top:1px; accent-color: var(--blue); }
 
         .wrap { flex:1; display:flex; flex-direction:column; max-width:720px; width:100%; margin:0 auto; padding:14px 14px calc(14px + env(safe-area-inset-bottom)); }
 
@@ -128,10 +136,10 @@
 <body>
 <div class="hdr">
     <img src="/icon.png" alt="UIB">
-    <div class="txtblk"><div class="t">MAX <span style="font-weight:500;opacity:.8;">by UIB</span></div><div class="s">Universal Insurance Brokers · Quick car quote</div></div>
+    <div class="txtblk"><div class="t">MAX <span style="font-weight:500;opacity:.8;">by UIB</span></div><div class="s">Universal Insurance Brokers · Dealer partners</div></div>
     <div class="spacer"></div>
-    <button type="button" class="dealer" onclick="MaxLead.dealerSignup()">🤝 Dealer sign up</button>
-    <button type="button" class="restart" onclick="MaxLead.restart()" title="Start over"><span class="full">Start over</span><span class="short">↺</span></button>
+    <button type="button" class="dealer" id="hdrAccount" style="display:none;" onclick="MaxLead.logout()">Log out</button>
+    <button type="button" class="restart" style="display:none;" onclick="MaxLead.restart()" title="Start over"><span class="full">Start over</span><span class="short">↺</span></button>
 </div>
 
 <div class="wrap">
@@ -142,7 +150,7 @@
             <div class="neck"></div>
             <div class="body"><div class="core"></div></div>
         </div>
-        <div class="txt"><b>Get a car insurance quote in 2 minutes</b><span>Snap your license and VIN. A licensed agent calls you back with the best rates.</span></div>
+        <div class="txt"><b>Refer a customer in 2 minutes</b><span>Snap their license and VIN. A licensed UIB agent calls them with the best rates.</span></div>
     </div>
     <div id="offline" style="display:none;background:#fef3c7;color:#92400e;border:1px solid #fcd34d;border-radius:10px;padding:8px 12px;font-size:13px;margin:0 0 10px;">You're offline. MAX can't read photos or send your request until you reconnect, but you can keep going.</div>
     <div class="steps" id="steps"></div>
@@ -150,10 +158,10 @@
     <div class="log" id="log"></div>
 
     <div class="composer" id="composer"></div>
-    <div class="note">Your details are sent only to Universal Insurance Brokers. <a href="/privacy">Privacy policy</a> · Auto dealer? <a href="#" onclick="MaxLead.dealerSignup();return false;">Sign up to refer customers</a></div>
+    <div class="note">Customer details are sent only to Universal Insurance Brokers. <a href="/privacy">Privacy policy</a></div>
     <input type="file" id="file" accept="image/*" capture="environment" style="display:none;" onchange="MaxLead.fileChosen(this)">
 </div>
 
-<script src="/max.js?v=20261007a"></script>
+<script src="/max.js?v=20261007b"></script>
 </body>
 </html>

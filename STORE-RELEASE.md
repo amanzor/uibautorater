@@ -1,6 +1,6 @@
 # MAX by UIB — publishing to the App Store and Google Play
 
-MAX is the consumer lead app at `/max` (the agent rater stays at `/`).
+MAX is the consumer lead app. In this repository it is the whole site (served at `/`).
 Prospects enter their name, phone and email, photograph their driver's
 license and VIN, answer whether they are insured today, consent, and the
 lead is emailed to quotes@universalinsurancebroker.com and logged to the
@@ -13,18 +13,14 @@ updates the store apps instantly with no new store submission.
 
 ## 0. Before anything else
 
-1. Deploy the web app. The MAX app is served at
-   `https://uib-binderbook.vercel.app/max` once the binderbook PR is merged
-   (and at `https://<your-domain>/max` for this repo when it is connected to
-   Vercel). The store shells point at the binderbook address; change
-   `server.url` in `native/capacitor.config.json` if you move it.
-2. Deploy the two Supabase functions and secrets (see README):
+1. Deploy the web app: connect this repository to Vercel (Add New Project ▸ import ▸ framework "Other" ▸ no build command). The files assume the default address `https://uibautorater.vercel.app`; if Vercel gives you a different one (or you add your own domain) put it in `native/capacitor.config.json` as `server.url` and in `native/www/index.html`.
+2. Deploy the two Supabase functions (sources under `supabase/functions/`) and secrets (see README):
    `claude` (already deployed, reads the photos) and `inquiry` with
    `RESEND_API_KEY` (sends the lead emails). Without `inquiry`, the app
    falls back to opening the phone's mail app.
 3. Optional: run `supabase-max-leads.sql` in Supabase ▸ SQL Editor so every
    lead is also stored in a table.
-4. Privacy policy URL for both stores: `https://uib-binderbook.vercel.app/maxprivacy.html`.
+4. Privacy policy URL for both stores: `https://uibautorater.vercel.app/privacy`.
 
 ## 1. One-time accounts
 
@@ -106,6 +102,6 @@ taken through the native camera API; the web app already works unchanged.
 - Leads arrive at quotes@universalinsurancebroker.com with the subject
   "New Lead (MAX app) – <name>" and dealer sign-ups as "New Dealer Sign-up –
   <name>". If the `max_leads` table exists they are stored there as well.
-- Share the plain link `https://uib-binderbook.vercel.app/max` on social
+- Share the plain link `https://uibautorater.vercel.app` on social
   media and dealer counters too; it works as a web page and installs as a
   home-screen app without the stores.

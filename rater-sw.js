@@ -13,10 +13,10 @@
 //  Bump CACHE whenever the shell files change in a way that
 //  must invalidate old copies.
 // ============================================================
-const CACHE = 'uib-rater-v25';
+const CACHE = 'uib-rater-v26';
 const SHELL = [
-  '/',
-  '/index.html',
+  '/rater',
+  '/rater.html',
   '/rater.js?v=20261006c',
   '/rater.webmanifest',
   '/uib-theme.css?v=20261003a',
@@ -68,7 +68,7 @@ self.addEventListener('fetch', (event) => {
       caches.match(req, { ignoreSearch: false }).then((hit) => {
         if (hit) return hit;
         // Navigations fall back to the rater shell when offline.
-        if (req.mode === 'navigate') return caches.match('/index.html').then((r) => r || caches.match('/'));
+        if (req.mode === 'navigate') return caches.match('/rater.html').then((r) => r || caches.match('/rater'));
         return caches.match(req, { ignoreSearch: true });
       })
     )

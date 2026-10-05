@@ -2,9 +2,9 @@
   "name": "UIB Auto Rater",
   "short_name": "UIB Rater",
   "description": "Multi-carrier auto insurance rater for Universal Insurance Brokers",
-  "id": "/",
-  "start_url": "/",
-  "scope": "/",
+  "id": "/rater",
+  "start_url": "/rater",
+  "scope": "/rater",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#0d1f3c",
@@ -38,7 +38,7 @@
   "shortcuts": [
     {
       "name": "New Quote",
-      "url": "/",
+      "url": "/rater",
       "icons": [
         {
           "src": "icons/rater-192.png",

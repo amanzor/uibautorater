@@ -1,0 +1,26 @@
+{
+  "name": "max-by-uib",
+  "version": "1.1.0",
+  "private": true,
+  "description": "App Store / Google Play app for MAX by UIB (Capacitor). The web app in the repository root is bundled into the native shell by `npm run build`.",
+  "scripts": {
+    "copy-web": "node scripts/copy-web.js",
+    "build": "npm run copy-web && cap sync",
+    "sync": "cap sync",
+    "open:android": "cap open android",
+    "open:ios": "cap open ios"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.0.0",
+    "@capacitor/app": "^8.0.0",
+    "@capacitor/camera": "^8.0.0",
+    "@capacitor/core": "^8.0.0",
+    "@capacitor/haptics": "^8.0.0",
+    "@capacitor/ios": "^8.0.0",
+    "@capacitor/splash-screen": "^8.0.0",
+    "@capacitor/status-bar": "^8.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.0.0"
+  }
+}

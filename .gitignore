@@ -1,2 +1,9 @@
 backups/
 node_modules/
+native/node_modules/
+native/android/build/
+native/android/app/build/
+native/android/.gradle/
+native/ios/App/Pods/
+*.keystore
+*.jks

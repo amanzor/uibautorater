@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">MAX by UIB</string>
+    <string name="title_activity_main">MAX by UIB</string>
+    <string name="package_name">com.universalinsurancebrokers.max</string>
+    <string name="custom_url_scheme">com.universalinsurancebrokers.max</string>
+</resources>

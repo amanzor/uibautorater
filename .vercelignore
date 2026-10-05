@@ -1,4 +1,6 @@
 # Not part of the web app
 supabase/
+native/
 *.ts
 *.md
+*.sql

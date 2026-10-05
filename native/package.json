@@ -1,0 +1,19 @@
+{
+  "name": "max-by-uib",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Native App Store / Play Store wrappers for MAX by UIB (Capacitor). The app itself is the hosted web app at /max/.",
+  "scripts": {
+    "sync": "cap sync",
+    "open:android": "cap open android",
+    "open:ios": "cap open ios"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.0.0",
+    "@capacitor/core": "^8.0.0",
+    "@capacitor/ios": "^8.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.0.0"
+  }
+}

@@ -1,8 +1,8 @@
 # MAX by UIB — publishing to the App Store and Google Play
 
 MAX is the consumer lead app. In this repository it is the whole site (served at `/`).
-Prospects enter their name, phone and email, photograph their driver's
-license and VIN, answer whether they are insured today, consent, and the
+Prospects photograph their driver's license (MAX reads it) and their VIN,
+leave a phone number and email, and the
 lead is emailed to quotes@universalinsurancebroker.com and logged to the
 `max_leads` table. Auto dealers can sign up as referral partners from the
 same app.

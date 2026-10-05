@@ -1,6 +1,6 @@
 // MAX by UIB — service worker: network first, cache fallback for the app shell.
-const CACHE = 'uib-max-standalone-v1';
-const SHELL = ['/', '/max.js?v=20261006b', '/manifest.webmanifest', '/privacy', '/icon.png', '/icons/rater-192.png', '/icons/rater-512.png', '/icons/rater-180.png'];
+const CACHE = 'uib-max-standalone-v2';
+const SHELL = ['/', '/max.js?v=20261007a', '/manifest.webmanifest', '/privacy', '/icon.png', '/icons/rater-192.png', '/icons/rater-512.png', '/icons/rater-180.png'];
 const NEVER_CACHE = ['supabase.co', 'nhtsa.dot.gov'];
 
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => Promise.all(SHELL.map((u) => c.add(u).catch(() => null)))).then(() => self.skipWaiting())); });

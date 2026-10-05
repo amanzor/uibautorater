@@ -1,7 +1,7 @@
 // ============================================================
 //  MAX by UIB — consumer lead app
 //  ------------------------------------------------------------
-//  A guided, no-login flow for prospects: name → phone → email →
+//  A guided, no-login flow for prospects: license photo → VIN → phone → email →
 //  driver's license photo → VIN photo → current insurance →
 //  consent → submit. MAX (Claude Haiku 4.5, through the Supabase
 //  "claude" proxy) reads the photos; the lead is emailed to the
@@ -23,13 +23,13 @@
     const INQUIRY_TO = 'quotes@universalinsurancebroker.com';
     const HEADERS    = { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON, 'Content-Type': 'application/json' };
 
-    const STEPS = ['name', 'phone', 'email', 'dl', 'vin', 'insurance', 'submit'];
+    const STEPS = ['dl', 'vin', 'phone', 'email', 'submit'];
     let step = 0;
     let lead = blank();
     let busy = false;
     let pendingKind = 'dl';
 
-    function blank() { return { name: '', phone: '', email: '', dl: null, dlPhoto: null, vin: '', vehicle: null, vinPhoto: null, currentInsurer: '', consent: false, startedAt: new Date().toISOString() }; }
+    function blank() { return { name: '', phone: '', email: '', dl: null, dlPhoto: null, vin: '', vehicle: null, vinPhoto: null, consent: false, startedAt: new Date().toISOString() }; }
 
     const $ = (id) => document.getElementById(id);
     const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -56,47 +56,46 @@
     // ── steps ────────────────────────────────────────────────────
     async function start() {
         $('log').innerHTML = ''; step = 0; progress();
-        await say("Hi! I'm MAX from Universal Insurance Brokers. I'll grab a few details and a licensed agent will call you with your best car insurance rates. First, what's your name?");
-        askName();
-    }
-    function askName() {
-        compose('<div class="row"><input type="text" id="in" placeholder="First and last name" autocomplete="name" value="' + esc(lead.name) + '" onkeydown="MaxLead.enter(event, MaxLead.saveName)"><button class="b pri" onclick="MaxLead.saveName()">Next</button></div>');
-    }
-    async function saveName() {
-        const v = ($('in').value || '').trim(); if (v.length < 2) { $('in').focus(); return; }
-        lead.name = v; msg('user', esc(v)); step = 1; progress();
-        await say('Nice to meet you, ' + esc(v.split(' ')[0]) + '! What\'s the best phone number to reach you?');
-        compose('<div class="row"><input type="tel" id="in" inputmode="tel" placeholder="(305) 555-1234" autocomplete="tel" maxlength="14" oninput="this.value=MaxLead.fmtPhone(this.value)" onkeydown="MaxLead.enter(event, MaxLead.savePhone)"><button class="b pri" onclick="MaxLead.savePhone()">Next</button></div>');
+        await say("Hi! I'm MAX from Universal Insurance Brokers. Share a photo of your driver's license and your car's VIN, leave a phone number and email, and a licensed agent will contact you with your best car insurance rates.");
+        await say('First, take a photo of the <b>front of your driver\'s license</b>. Hold it flat, fill the frame, and avoid glare. I only use it to prepare your quote.');
+        composeDL();
     }
     function fmtPhone(v) { const d = String(v || '').replace(/\D/g, '').slice(0, 10); if (d.length < 4) return d; if (d.length < 7) return '(' + d.slice(0, 3) + ') ' + d.slice(3); return '(' + d.slice(0, 3) + ') ' + d.slice(3, 6) + '-' + d.slice(6); }
+    async function askPhone() {
+        step = 2; progress();
+        await say('Almost done, ' + esc(firstName()) + '. What\'s the best phone number for the agent to reach you?');
+        compose('<div class="row"><input type="tel" id="in" inputmode="tel" placeholder="(305) 555-1234" autocomplete="tel" maxlength="14" value="' + esc(lead.phone) + '" oninput="this.value=MaxLead.fmtPhone(this.value)" onkeydown="MaxLead.enter(event, MaxLead.savePhone)"><button class="b pri" onclick="MaxLead.savePhone()">Next</button></div>');
+    }
     async function savePhone() {
         const v = fmtPhone($('in').value); if (v.replace(/\D/g, '').length !== 10) { msg('bot err', 'Please enter a 10-digit phone number.'); $('in').focus(); return; }
-        lead.phone = v; msg('user', esc(v)); step = 2; progress();
-        await say('Thanks. And your email address? We\'ll send your quote there too.');
-        compose('<div class="row"><input type="email" id="in" inputmode="email" placeholder="name@example.com" autocomplete="email" onkeydown="MaxLead.enter(event, MaxLead.saveEmail)"><button class="b pri" onclick="MaxLead.saveEmail()">Next</button></div>');
+        lead.phone = v; msg('user', esc(v)); step = 3; progress();
+        await say('And your email address? We\'ll send your quote there too.');
+        compose('<div class="row"><input type="email" id="in" inputmode="email" placeholder="name@example.com" autocomplete="email" value="' + esc(lead.email) + '" onkeydown="MaxLead.enter(event, MaxLead.saveEmail)"><button class="b ok" id="sendBtn" onclick="MaxLead.saveEmail()">Send</button></div>' +
+            '<p class="consent">By tapping <b>Send</b> you agree that Universal Insurance Brokers may contact you by phone, text or email about this quote, and you accept the <a href="/privacy" target="_blank">privacy policy</a>.</p>');
     }
     async function saveEmail() {
         const v = ($('in').value || '').trim(); if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) { msg('bot err', 'That email doesn\'t look right. Please check it.'); $('in').focus(); return; }
-        lead.email = v; msg('user', esc(v)); step = 3; progress();
-        await say('Now take a photo of your <b>driver\'s license</b> (front). Hold it flat, fill the frame, and avoid glare. I only use it to prepare your quote.');
-        composeDL();
+        lead.email = v; lead.consent = true; msg('user', esc(v)); step = 4; progress();
+        await submit();
     }
+    function firstName() { return (lead.name || '').split(' ')[0] || 'there'; }
     function composeDL() {
         compose('<button class="b pri big" onclick="MaxLead.pick(\'dl\')">📷 Take a photo of my license</button><div class="chips" style="margin-top:8px;"><button class="b sec" onclick="MaxLead.typeDL()">Type it instead</button></div>');
     }
     function typeDL() {
-        compose('<div class="row" style="flex-wrap:wrap;"><input type="text" id="dob" placeholder="Date of birth (MM/DD/YYYY)" inputmode="numeric" style="flex:1 1 100%;"><input type="text" id="dln" placeholder="License number (optional)" style="flex:1 1 100%;"><button class="b pri" style="flex:1" onclick="MaxLead.saveTypedDL()">Next</button></div>');
+        compose('<div class="row" style="flex-wrap:wrap;"><input type="text" id="nm" placeholder="First and last name" autocomplete="name" value="' + esc(lead.name) + '" style="flex:1 1 100%;"><input type="text" id="dob" placeholder="Date of birth (MM/DD/YYYY)" inputmode="numeric" style="flex:1 1 100%;"><input type="text" id="dln" placeholder="License number (optional)" style="flex:1 1 100%;"><button class="b pri" style="flex:1" onclick="MaxLead.saveTypedDL()">Next</button></div>');
     }
     async function saveTypedDL() {
-        const dob = ($('dob').value || '').trim(); const dln = ($('dln').value || '').trim();
+        const nm = ($('nm').value || '').trim(); const dob = ($('dob').value || '').trim(); const dln = ($('dln').value || '').trim();
+        if (nm.length < 2) { msg('bot err', 'Please type your first and last name.'); $('nm').focus(); return; }
         const m = dob.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/); if (!m) { msg('bot err', 'Please type the date of birth as MM/DD/YYYY.'); return; }
-        const parts = lead.name.split(' ');
+        lead.name = nm; const parts = nm.split(' ');
         lead.dl = { firstName: parts[0] || '', lastName: parts.slice(1).join(' '), dob: m[3] + '-' + m[1].padStart(2, '0') + '-' + m[2].padStart(2, '0'), dlNumber: dln.toUpperCase(), dlState: 'FL' };
-        msg('user', 'DOB ' + esc(dob) + (dln ? ', DL ' + esc(dln) : ''));
+        msg('user', esc(nm) + ', DOB ' + esc(dob) + (dln ? ', DL ' + esc(dln) : ''));
         await afterDL();
     }
     async function afterDL() {
-        step = 4; progress();
+        step = 1; progress();
         await say('Great. Now a photo of your car\'s <b>VIN</b> — it\'s on the driver\'s door sticker, the dashboard by the windshield, or your registration or insurance card.');
         composeVIN();
     }
@@ -125,31 +124,7 @@
         await afterVIN();
     }
     function titleCase(s) { return String(s || '').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()); }
-    async function afterVIN() {
-        step = 5; progress();
-        await say('Do you currently have car insurance?');
-        compose('<div class="chips"><button class="b pri" onclick="MaxLead.insured(true)">Yes</button><button class="b sec" onclick="MaxLead.insured(false)">No</button></div>');
-    }
-    async function insured(yes) {
-        msg('user', yes ? 'Yes' : 'No');
-        if (!yes) { lead.currentInsurer = 'None'; return review(); }
-        await say('Who is your current insurance company?');
-        compose('<div class="row"><input type="text" id="in" placeholder="e.g. Progressive, GEICO…" onkeydown="MaxLead.enter(event, MaxLead.saveInsurer)"><button class="b pri" onclick="MaxLead.saveInsurer()">Next</button></div>');
-    }
-    async function saveInsurer() { const v = ($('in').value || '').trim(); lead.currentInsurer = v || 'Unknown'; msg('user', esc(lead.currentInsurer)); review(); }
-
-    async function review() {
-        step = 6; progress();
-        const d = lead.dl || {}; const v = lead.vehicle || {};
-        const card = '<div class="card">' +
-            '<div><b>Name:</b> ' + esc(lead.name) + '</div><div><b>Phone:</b> ' + esc(lead.phone) + ' · <b>Email:</b> ' + esc(lead.email) + '</div>' +
-            (lead.dl ? '<div><b>License:</b> ' + esc([d.firstName, d.lastName].filter(Boolean).join(' ')) + (d.dob ? ', DOB ' + esc(d.dob) : '') + (d.dlNumber ? ', ' + esc(d.dlNumber) : '') + '</div>' : '') +
-            (lead.vin ? '<div><b>Vehicle:</b> ' + esc([v.year, v.make, v.model].filter(Boolean).join(' ') || 'VIN') + ' (' + esc(lead.vin) + ')</div>' : '') +
-            '<div><b>Current insurance:</b> ' + esc(lead.currentInsurer || '—') + '</div></div>';
-        await say('Here\'s what I have. Ready to send it to an agent?' + card);
-        compose('<label class="consent"><input type="checkbox" id="consent"><span>I agree that Universal Insurance Brokers may contact me by phone, text or email about this quote, and I accept the <a href="/privacy" target="_blank">privacy policy</a>.</span></label>' +
-            '<button class="b ok big" id="sendBtn" onclick="MaxLead.submit()">Send my quote request</button>');
-    }
+    async function afterVIN() { await askPhone(); }
 
     // ── photos → MAX reads them ──────────────────────────────────
     function pick(kind) { pendingKind = kind; const f = $('file'); f.value = ''; f.click(); }
@@ -184,7 +159,8 @@
     }
     async function confirmDL(ok) {
         msg('user', ok ? 'Yes, correct' : 'Retake');
-        if (!ok) { lead.dl = null; lead.dlPhoto = null; composeDL(); return; }
+        if (!ok) { lead.dl = null; lead.dlPhoto = null; lead.name = ''; composeDL(); return; }
+        lead.name = [lead.dl.firstName, lead.dl.lastName].filter(Boolean).join(' ') || lead.name;
         await afterDL();
     }
 
@@ -221,30 +197,30 @@
             'Name: ' + lead.name, 'Phone: ' + lead.phone, 'Email: ' + lead.email, '',
             'DRIVER\'S LICENSE', '  Name on license: ' + ([d.firstName, d.middleName, d.lastName].filter(Boolean).join(' ') || '—'), '  DOB: ' + (d.dob || '—') + '   Sex: ' + (d.gender || '—'), '  DL #: ' + (d.dlNumber || '—') + '   State: ' + (d.dlState || '—') + '   Exp: ' + (d.expiration || '—'), '  Address: ' + (d.address || lead.address || '—'), '',
             'VEHICLE', '  VIN: ' + (lead.vin || '— (skipped)'), '  ' + ([v.year, v.make, v.model, v.trim].filter(Boolean).join(' ') || ''), '',
-            'Current insurance: ' + (lead.currentInsurer || '—'), 'Consent to contact: yes', '',
+            'Consent to contact: yes (agreed in the app)', '',
             (lead.dlPhoto ? 'License photo attached. ' : '') + (lead.vinPhoto ? 'VIN photo attached.' : '')].join('\n');
     }
     async function submit() {
-        if (!$('consent').checked) { msg('bot err', 'Please tick the consent box so we can contact you.'); return; }
-        const btn = $('sendBtn'); btn.disabled = true; btn.innerHTML = '<span class="spin"></span>Sending…';
+        const btn = $('sendBtn'); if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spin"></span>Sending…'; }
+        typing(true);
         const text = leadText(); const subject = 'New Lead (MAX app) – ' + lead.name;
         const attachments = []; if (lead.dlPhoto) attachments.push({ filename: 'drivers-license.jpg', content: lead.dlPhoto.b64 }); if (lead.vinPhoto) attachments.push({ filename: 'vin.jpg', content: lead.vinPhoto.b64 });
         try {
             const res = await fetch(INQUIRY_FN, { method: 'POST', headers: HEADERS, body: JSON.stringify({ subject, text, html: '<pre style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;white-space:pre-wrap;">' + esc(text) + '</pre>', replyTo: lead.email, attachments, source: 'max-app',
-                lead: { name: lead.name, phone: lead.phone, email: lead.email, dl: lead.dl, vin: lead.vin, vehicle: lead.vehicle, current_insurer: lead.currentInsurer, address: (lead.dl && lead.dl.address) || lead.address || '' } }) });
+                lead: { name: lead.name, phone: lead.phone, email: lead.email, dl: lead.dl, vin: lead.vin, vehicle: lead.vehicle, address: (lead.dl && lead.dl.address) || lead.address || '' } }) });
             const j = await res.json().catch(() => ({}));
             if (!res.ok || !j.ok) throw new Error(j.error || ('HTTP ' + res.status));
-            done();
+            typing(false); done();
         } catch (e) {
             // Fallback: the prospect's own mail app, prefilled (photos cannot be attached this way).
             const mailto = 'mailto:' + INQUIRY_TO + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(text.slice(0, 1800));
-            btn.disabled = false; btn.innerHTML = 'Send my quote request';
+            typing(false); if (btn) { btn.disabled = false; btn.innerHTML = 'Send'; }
             msg('bot err', 'I couldn\'t send that automatically. <a href="' + mailto + '">Tap here to send it by email</a> and we\'ll take it from there.');
         }
     }
     function done() {
         compose('');
-        $('log').innerHTML += '<div class="done"><div class="big-check">✓</div><h2>Thanks, ' + esc(lead.name.split(' ')[0]) + '!</h2><p>Your details are on their way to Universal Insurance Brokers. A licensed agent will call you at <b>' + esc(lead.phone) + '</b> shortly with your best rates.</p><p style="margin-top:14px;"><button class="b sec" onclick="MaxLead.restart()">Start another quote</button></p></div>';
+        $('log').innerHTML += '<div class="done"><div class="big-check">✓</div><h2>Thanks, ' + esc(firstName()) + '!</h2><p><b>An agent will contact you shortly.</b> Your details are on their way to Universal Insurance Brokers; a licensed agent will reach you at ' + esc(lead.phone) + ' or ' + esc(lead.email) + ' with your best rates.</p><p style="margin-top:14px;"><button class="b sec" onclick="MaxLead.restart()">Start another quote</button></p></div>';
         scrollDown();
         try { localStorage.removeItem('maxLeadDraft'); } catch (e) {}
     }
@@ -295,5 +271,5 @@
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
     document.addEventListener('DOMContentLoaded', start);
 
-    window.MaxLead = { enter: onEnter, saveName, savePhone, saveEmail, fmtPhone, pick, fileChosen, confirmDL, typeDL, saveTypedDL, typeVIN, saveTypedVIN, skipVIN, insured, saveInsurer, submit, restart, dealerSignup, submitDealer, get lead() { return lead; } };
+    window.MaxLead = { enter: onEnter, savePhone, saveEmail, fmtPhone, pick, fileChosen, confirmDL, typeDL, saveTypedDL, typeVIN, saveTypedVIN, skipVIN, submit, restart, dealerSignup, submitDealer, get lead() { return lead; } };
 })();

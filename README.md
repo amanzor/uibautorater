@@ -1,8 +1,8 @@
 # MAX by UIB
 
 MAX is Universal Insurance Brokers' consumer lead app: a prospect enters
-their name, phone and email, photographs their driver's license and VIN,
-answers whether they are insured today, gives consent, and the lead is
+photographs their driver's license (MAX reads the name and details), then
+their VIN, leaves a phone number and email, and the lead is
 emailed to quotes@universalinsurancebroker.com (and stored in Supabase
 when the `max_leads` table exists). Auto dealers can sign up as referral
 partners from the same app. MAX reads the photos with Claude Haiku 4.5.

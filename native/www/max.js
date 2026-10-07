@@ -152,7 +152,7 @@
         await say('Are you a <b>marketing partner</b> (auto-dealer salesperson) referring a customer, or would you like a quote for yourself as a guest?');
         compose('<div id="welcomeChoices" class="chips" style="flex-direction:column;">' +
             '<button class="b pri big" id="w_login" onclick="MaxLead.chooseLogin()">🔐 Log in</button>' +
-            '<button class="b ok big" id="w_signup" onclick="MaxLead.chooseSignup()">🤝 Sign up as a marketing partner</button>' +
+            '<button class="b ok big" id="w_signup" onclick="MaxLead.chooseSignup()">🤝 Create account</button>' +
             '<button class="b sec big" id="w_guest" onclick="MaxLead.continueAsGuest()">Continue as guest</button></div>' +
             '<p class="consent" style="margin-top:6px;">Marketing partners log in so their referrals are credited to them. Guests can send a quote request for themselves without an account.</p>');
     }

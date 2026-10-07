@@ -76,7 +76,11 @@
     // password) and then log in with that email and password. The session
     // is kept on the device so the app opens straight into the chat.
     let auth = null;                               // { access_token, refresh_token, expires_at, user }
-    function loadAuth() { try { auth = JSON.parse(localStorage.getItem('maxAuth') || 'null'); } catch (e) { auth = null; } return auth; }
+    let guest = false;                             // using the app without an account (this browser session only)
+    function isGuest() { return guest && !(auth && auth.access_token); }
+    function loggedIn() { return !!(auth && auth.access_token); }
+    function setGuest(on) { guest = !!on; try { if (on) sessionStorage.setItem('maxGuest', '1'); else sessionStorage.removeItem('maxGuest'); } catch (e) { /* ignore */ } }
+    function loadAuth() { try { auth = JSON.parse(localStorage.getItem('maxAuth') || 'null'); } catch (e) { auth = null; } try { guest = sessionStorage.getItem('maxGuest') === '1'; } catch (e) { guest = false; } return auth; }
     function saveAuth(a) { auth = a; try { if (a) localStorage.setItem('maxAuth', JSON.stringify(a)); else localStorage.removeItem('maxAuth'); } catch (e) { /* private mode */ } }
     function me() { const u = (auth && auth.user) || {}; const m = u.user_metadata || {}; return { id: u.id || '', email: u.email || '', name: m.full_name || '', dealership: m.dealership || '', address: m.address || '', phone: m.phone || '' }; }
     function authError(j, fallback) { return (j && (j.error_description || j.msg || j.message || (typeof j.error === 'string' ? j.error : ''))) || fallback; }
@@ -90,7 +94,7 @@
         if (!r.ok) {
             const m = authError(r.j, '');
             if (/already|exists/i.test(m)) throw new Error('That email already has an account. Log in instead, or reset your password.');
-            if (/rate limit/i.test(m)) throw new Error('We could not send the confirmation email right now (the email service has a limit on how many it sends per hour). If you already submitted this form once, your account may exist: tap "I already have an account" and log in. Otherwise please try again in about an hour.');
+            if (/rate limit/i.test(m)) throw new Error('We could not send the confirmation email right now (the email service has a limit on how many it sends per hour). If you already submitted this form once, your account may exist: tap "I already have an account" and log in. Otherwise please try again in about an hour, or continue as a guest for now.');
             throw new Error(m || 'Sign-up failed (HTTP ' + r.status + ').');
         }
         const s = sessionFrom(r.j); if (s) { saveAuth(s); return 'active'; }
@@ -116,7 +120,7 @@
     async function logOut() {
         const tok = auth && auth.access_token; saveAuth(null);
         if (tok) { try { await authPost('/logout', {}, tok); } catch (e) { /* ignore */ } }
-        lead = blank(); loginScreen();
+        setGuest(false); lead = blank(); welcomeScreen();
     }
     async function forgotPassword(email) { const r = await authPost('/recover?redirect_to=' + encodeURIComponent(SITE_URL), { email }); if (!r.ok) throw new Error(authError(r.j, 'Could not send the reset email.')); }
     async function setPassword(password) {
@@ -135,10 +139,26 @@
     function setHeader() {
         const u = me(); const btn = $('hdrAccount'); const sub = document.querySelector('.hdr .s'); const rs = document.querySelector('.hdr .restart');
         if (auth && auth.access_token) { btn.style.display = ''; btn.innerHTML = 'Log out'; btn.title = u.email; if (sub) sub.textContent = (u.name || u.email) + (u.dealership ? ' · ' + u.dealership : ''); if (rs) rs.style.display = ''; }
+        else if (isGuest()) { btn.style.display = ''; btn.innerHTML = 'Log in'; btn.title = 'Log in or create a marketing partner account'; btn.onclick = () => { setGuest(false); loginScreen(); }; if (sub) sub.textContent = 'Universal Insurance Brokers · Guest'; if (rs) rs.style.display = ''; }
         else { btn.style.display = 'none'; if (sub) sub.textContent = 'Universal Insurance Brokers · Marketing partners'; if (rs) rs.style.display = 'none'; }
+        if (loggedIn()) btn.onclick = () => MaxLead.logout();
     }
     function formShell(id, title, intro, body) { $('steps').innerHTML = ''; compose(''); $('log').innerHTML = '<div class="form" id="' + id + '"><h2>' + title + '</h2><p>' + intro + '</p>' + body + '<div class="err" id="f_err" style="display:none;"></div></div>'; window.scrollTo({ top: 0 }); }
     function showErr(text) { const e = $('f_err'); if (!e) return; e.innerHTML = text; e.style.display = ''; }
+    // MAX greets and offers the three ways in, as chat bubbles with reply buttons.
+    async function welcomeScreen() {
+        setGuest(false); setHeader(); step = 0; $('steps').innerHTML = ''; $('log').innerHTML = ''; compose('');
+        await say("Hi! I'm <b>MAX</b>, the quote assistant at Universal Insurance Brokers. I can get a car insurance quote started in about two minutes from a photo of a driver's license and a VIN.");
+        await say('Are you a <b>marketing partner</b> (auto-dealer salesperson) referring a customer, or would you like a quote for yourself as a guest?');
+        compose('<div id="welcomeChoices" class="chips" style="flex-direction:column;">' +
+            '<button class="b pri big" id="w_login" onclick="MaxLead.chooseLogin()">🔐 Log in</button>' +
+            '<button class="b ok big" id="w_signup" onclick="MaxLead.chooseSignup()">🤝 Sign up as a marketing partner</button>' +
+            '<button class="b sec big" id="w_guest" onclick="MaxLead.continueAsGuest()">Continue as guest</button></div>' +
+            '<p class="consent" style="margin-top:6px;">Marketing partners log in so their referrals are credited to them. Guests can send a quote request for themselves without an account.</p>');
+    }
+    function chooseLogin() { msg('user', 'Log in'); loginScreen(); }
+    function chooseSignup() { msg('user', 'Create an account'); dealerSignup(); }
+    async function continueAsGuest() { const fromWelcome = !!$('welcomeChoices'); if (fromWelcome) msg('user', 'Continue as guest'); setGuest(true); lead = blank(); start({ greeted: fromWelcome }); }
     function loginScreen(notice) {
         setHeader(); step = 0;
         formShell('loginForm', '🔐 Marketing partner log in', 'Sign in with the email and password you chose when you signed up.',
@@ -146,7 +166,8 @@
             '<div><label>Password</label><input type="password" id="l_pw" autocomplete="current-password" placeholder="Your password" onkeydown="MaxLead.enter(event, MaxLead.login)"></div>' +
             (notice ? '<div class="ok-note">' + notice + '</div>' : '') +
             '<button class="b pri big" id="l_btn" onclick="MaxLead.login()">Log in</button>' +
-            '<div class="links"><a href="#" onclick="MaxLead.forgot();return false;">Forgot password?</a><a href="#" onclick="MaxLead.dealerSignup();return false;">New here? Create your account</a></div>');
+            '<div class="links"><a href="#" onclick="MaxLead.forgot();return false;">Forgot password?</a><a href="#" onclick="MaxLead.dealerSignup();return false;">New here? Create your account</a></div>' +
+            '<div class="links"><a href="#" onclick="MaxLead.welcome();return false;">&larr; Back</a><a href="#" onclick="MaxLead.continueAsGuest();return false;">Continue as guest</a></div>');
         setTimeout(() => { const e = $('l_email'); if (e) e.focus(); }, 50);
     }
     async function login() {
@@ -154,7 +175,7 @@
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return showErr('Please enter the email you signed up with.');
         if (!pw) return showErr('Please enter your password.');
         const btn = $('l_btn'); btn.disabled = true; btn.innerHTML = '<span class="spin"></span>Logging in…';
-        try { await logIn(email, pw); haptic('success'); lead = blank(); start(); }
+        try { await logIn(email, pw); setGuest(false); haptic('success'); lead = blank(); start(); }
         catch (e) { btn.disabled = false; btn.innerHTML = 'Log in'; showErr(esc(e.message)); haptic('error'); }
     }
     async function forgot() {
@@ -183,29 +204,40 @@
         const rec = recoveryFromHash();
         if (rec) { saveAuth(rec); try { const res = await fetch(AUTH_URL + '/user', { headers: Object.assign({}, HEADERS, { 'Authorization': 'Bearer ' + rec.access_token }) }); const u = await res.json(); if (res.ok && u && u.id) saveAuth(Object.assign({}, rec, { user: u })); } catch (e) { /* offline */ } return resetScreen(); }
         if (await ensureSession()) { setHeader(); return start(); }
-        loginScreen();
+        if (guest) { setHeader(); return start(); }
+        welcomeScreen();
     }
 
     // ── steps ────────────────────────────────────────────────────
-    async function start() {
-        setHeader();
-        $('log').innerHTML = ''; step = 0; progress();
-        await say('Hi ' + esc(firstOf(me().name) || 'there') + "! I'm MAX. Snap your customer's driver's license and VIN, add their phone and email, and a licensed UIB agent will contact them with their best car insurance rates.");
-        await say('First, take a photo of the <b>front of the customer\'s driver\'s license</b>. Hold it flat, fill the frame, and avoid glare.');
+    async function start(opts) {
+        setHeader(); opts = opts || {};
+        if (!opts.greeted) $('log').innerHTML = '';
+        step = 0; progress();
+        if (isGuest() && opts.greeted) {
+            await say('Great — let\'s get your quote started. Snap your driver\'s license and VIN, add your phone and email, and a licensed agent will contact you with your best rates.');
+            await say('First, take a photo of the <b>front of your driver\'s license</b>. Hold it flat, fill the frame, and avoid glare. It is used only to prepare your quote.');
+        } else if (isGuest()) {
+            await say("Hi! I'm MAX from Universal Insurance Brokers. Snap your driver's license and VIN, add your phone and email, and a licensed agent will contact you with your best car insurance rates.");
+            await say('First, take a photo of the <b>front of your driver\'s license</b>. Hold it flat, fill the frame, and avoid glare. It is used only to prepare your quote.');
+        } else {
+            await say('Hi ' + esc(firstOf(me().name) || 'there') + "! I'm MAX. Snap your customer's driver's license and VIN, add their phone and email, and a licensed UIB agent will contact them with their best car insurance rates.");
+            await say('First, take a photo of the <b>front of the customer\'s driver\'s license</b>. Hold it flat, fill the frame, and avoid glare.');
+        }
         composeDL();
     }
     function fmtPhone(v) { const d = String(v || '').replace(/\D/g, '').slice(0, 10); if (d.length < 4) return d; if (d.length < 7) return '(' + d.slice(0, 3) + ') ' + d.slice(3); return '(' + d.slice(0, 3) + ') ' + d.slice(3, 6) + '-' + d.slice(6); }
     async function askPhone() {
         step = 2; progress();
-        await say('Almost done. What\'s the best phone number for the agent to reach ' + esc(firstName()) + '?');
+        await say(isGuest() ? 'Almost done, ' + esc(firstName()) + '. What\'s the best phone number for the agent to reach you?' : 'Almost done. What\'s the best phone number for the agent to reach ' + esc(firstName()) + '?');
         compose('<div class="row"><input type="tel" id="in" inputmode="tel" placeholder="(305) 555-1234" autocomplete="tel" maxlength="14" value="' + esc(lead.phone) + '" oninput="this.value=MaxLead.fmtPhone(this.value)" onkeydown="MaxLead.enter(event, MaxLead.savePhone)"><button class="b pri" onclick="MaxLead.savePhone()">Next</button></div>');
     }
     async function savePhone() {
         const v = fmtPhone($('in').value); if (v.replace(/\D/g, '').length !== 10) { msg('bot err', 'Please enter a 10-digit phone number.'); $('in').focus(); return; }
         lead.phone = v; msg('user', esc(v)); step = 3; progress();
-        await say('And ' + esc(firstName()) + '\'s email address? The quote goes there too.');
+        await say(isGuest() ? 'And your email address? The quote goes there too.' : 'And ' + esc(firstName()) + '\'s email address? The quote goes there too.');
         compose('<div class="row"><input type="email" id="in" inputmode="email" placeholder="name@example.com" autocomplete="email" value="' + esc(lead.email) + '" onkeydown="MaxLead.enter(event, MaxLead.saveEmail)"><button class="b ok" id="sendBtn" onclick="MaxLead.saveEmail()">Send</button></div>' +
-            '<p class="consent">By tapping <b>Send</b> you confirm that ' + esc(firstName()) + ' agrees to be contacted by Universal Insurance Brokers by phone, text or email about this quote, and has seen the <a href="' + PRIVACY_HREF + '" target="_blank">privacy policy</a>.</p>');
+            (isGuest() ? '<p class="consent">By tapping <b>Send</b> you agree to be contacted by Universal Insurance Brokers by phone, text or email about this quote, and you accept the <a href="' + PRIVACY_HREF + '" target="_blank">privacy policy</a>.</p>'
+                       : '<p class="consent">By tapping <b>Send</b> you confirm that ' + esc(firstName()) + ' agrees to be contacted by Universal Insurance Brokers by phone, text or email about this quote, and has seen the <a href="' + PRIVACY_HREF + '" target="_blank">privacy policy</a>.</p>'));
     }
     async function saveEmail() {
         const v = ($('in').value || '').trim(); if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) { msg('bot err', 'That email doesn\'t look right. Please check it.'); $('in').focus(); return; }
@@ -218,16 +250,16 @@
     function isoDate(v) { v = String(v || '').trim(); let m = v.match(/^(\d{4})-(\d{2})-(\d{2})$/); if (m) return v; m = v.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/); return m ? m[3] + '-' + m[1].padStart(2, '0') + '-' + m[2].padStart(2, '0') : ''; }
     function fmtDate(iso) { const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? m[2] + '/' + m[3] + '/' + m[1] : (iso || ''); }
     function firstOf(s) { return String(s || '').trim().split(' ')[0]; }
-    function firstName() { return firstOf(lead.name) || 'the customer'; }
+    function firstName() { return firstOf(lead.name) || (isGuest() ? 'there' : 'the customer'); }
     function composeDL() {
         compose('<div class="chips"><button class="b pri big" id="camBtn" style="flex:1 1 55%;" onclick="MaxLead.pick(\'dl\', \'camera\')">📷 Take a photo of the license</button><button class="b pri big" id="upBtn" style="flex:1 1 40%;background:linear-gradient(to right,#0e7490,#06b6d4);" onclick="MaxLead.pick(\'dl\', \'upload\')">🖼️ Upload a photo</button></div><div class="chips" style="margin-top:8px;"><button class="b sec" onclick="MaxLead.typeDL()">Type it instead</button></div>');
     }
     function typeDL() {
-        compose('<div class="row" style="flex-wrap:wrap;"><input type="text" id="nm" placeholder="Customer\'s first and last name" autocomplete="off" value="' + esc(lead.name) + '" style="flex:1 1 100%;"><label class="dob-lbl" for="dob" style="flex:1 1 100%;">Date of birth</label><input type="date" id="dob" max="' + today() + '" style="flex:1 1 100%;"><input type="text" id="dln" placeholder="License number (optional)" style="flex:1 1 100%;"><button class="b pri" style="flex:1" onclick="MaxLead.saveTypedDL()">Next</button></div>');
+        compose('<div class="row" style="flex-wrap:wrap;"><input type="text" id="nm" placeholder="' + (isGuest() ? 'Your first and last name' : 'Customer\'s first and last name') + '" autocomplete="off" value="' + esc(lead.name) + '" style="flex:1 1 100%;"><label class="dob-lbl" for="dob" style="flex:1 1 100%;">Date of birth</label><input type="date" id="dob" max="' + today() + '" style="flex:1 1 100%;"><input type="text" id="dln" placeholder="License number (optional)" style="flex:1 1 100%;"><button class="b pri" style="flex:1" onclick="MaxLead.saveTypedDL()">Next</button></div>');
     }
     async function saveTypedDL() {
         const nm = ($('nm').value || '').trim(); const dob = ($('dob').value || '').trim(); const dln = ($('dln').value || '').trim();
-        if (nm.length < 2) { msg('bot err', 'Please type the customer\'s first and last name.'); $('nm').focus(); return; }
+        if (nm.length < 2) { msg('bot err', isGuest() ? 'Please type your first and last name.' : 'Please type the customer\'s first and last name.'); $('nm').focus(); return; }
         const iso = isoDate(dob); if (!iso) { msg('bot err', 'Please pick the date of birth.'); $('dob').focus(); return; }
         if (new Date(iso) > new Date()) { msg('bot err', 'The date of birth cannot be in the future.'); return; }
         lead.name = nm; const parts = nm.split(' ');
@@ -396,7 +428,7 @@
     function leadText() {
         const d = lead.dl || {}; const v = lead.vehicle || {}; const u = me();
         return ['NEW LEAD — MAX app', 'Received: ' + new Date().toLocaleString('en-US'), '',
-            'REFERRED BY', '  ' + (u.name || '—') + (u.dealership ? ' — ' + u.dealership : ''), '  ' + [u.phone, u.email].filter(Boolean).join('   '), '',
+            'REFERRED BY', ...(isGuest() ? ['  Guest — no marketing partner account (customer used the app directly)'] : ['  ' + (u.name || '—') + (u.dealership ? ' — ' + u.dealership : ''), '  ' + [u.phone, u.email].filter(Boolean).join('   ')]), '',
             'Name: ' + lead.name, 'Phone: ' + lead.phone, 'Email: ' + lead.email, '',
             'DRIVER\'S LICENSE', '  Name on license: ' + ([d.firstName, d.middleName, d.lastName].filter(Boolean).join(' ') || '—'), '  DOB: ' + (d.dob ? fmtDate(d.dob) : '—') + '   Sex: ' + (d.gender || '—'), '  DL #: ' + (d.dlNumber || '—') + '   State: ' + (d.dlState || '—') + '   Exp: ' + (d.expiration || '—'), '  Address: ' + (d.address || lead.address || '—'), '',
             'VEHICLE', '  VIN: ' + (lead.vin || '— (skipped)'), '  ' + ([v.year, v.make, v.model, v.trim].filter(Boolean).join(' ') || (lead.vin ? '(not decoded)' : '')),
@@ -407,11 +439,11 @@
     async function submit() {
         const btn = $('sendBtn'); if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spin"></span>Sending…'; }
         typing(true);
-        const u = me(); const text = leadText(); const subject = 'New Lead (MAX app) – ' + lead.name + (u.dealership || u.name ? ' via ' + (u.dealership || u.name) : '');
+        const u = me(); const text = leadText(); const subject = 'New Lead (MAX app) – ' + lead.name + (isGuest() ? ' (guest)' : (u.dealership || u.name ? ' via ' + (u.dealership || u.name) : ''));
         const attachments = []; if (lead.dlPhoto) attachments.push({ filename: 'drivers-license.jpg', content: lead.dlPhoto.b64 }); if (lead.vinPhoto) attachments.push({ filename: 'vin.jpg', content: lead.vinPhoto.b64 });
         try {
             const res = await fetch(INQUIRY_FN, { method: 'POST', headers: HEADERS, body: JSON.stringify({ subject, text, html: '<pre style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;white-space:pre-wrap;">' + esc(text) + '</pre>', replyTo: lead.email, attachments, source: 'max-app',
-                lead: { name: lead.name, phone: lead.phone, email: lead.email, dl: lead.dl, vin: lead.vin, vehicle: lead.vehicle, address: (lead.dl && lead.dl.address) || lead.address || '', referrer: { user_id: u.id, name: u.name, dealership: u.dealership, phone: u.phone, email: u.email } } }) });
+                lead: { name: lead.name, phone: lead.phone, email: lead.email, dl: lead.dl, vin: lead.vin, vehicle: lead.vehicle, address: (lead.dl && lead.dl.address) || lead.address || '', referrer: isGuest() ? { guest: true } : { user_id: u.id, name: u.name, dealership: u.dealership, phone: u.phone, email: u.email } } }) });
             const j = await res.json().catch(() => ({}));
             if (!res.ok || !j.ok) throw new Error(j.error || ('HTTP ' + res.status));
             typing(false); haptic('success'); done();
@@ -424,11 +456,11 @@
     }
     function done() {
         compose('');
-        $('log').innerHTML += '<div class="done"><div class="big-check">✓</div><h2>Sent!</h2><p><b>An agent will contact ' + esc(firstName()) + ' shortly.</b> The details are on their way to Universal Insurance Brokers; a licensed agent will reach ' + esc(firstName()) + ' at ' + esc(lead.phone) + ' or ' + esc(lead.email) + ' with their best rates.</p><p style="margin-top:14px;"><button class="b sec" onclick="MaxLead.restart()">Refer another customer</button></p></div>';
+        $('log').innerHTML += '<div class="done"><div class="big-check">✓</div><h2>' + (isGuest() ? 'Thanks, ' + esc(firstName()) + '!' : 'Sent!') + '</h2><p><b>An agent will contact ' + (isGuest() ? 'you' : esc(firstName())) + ' shortly.</b> ' + (isGuest() ? 'Your details are on their way to Universal Insurance Brokers; a licensed agent will reach you at ' + esc(lead.phone) + ' or ' + esc(lead.email) + ' with your best rates.' : 'The details are on their way to Universal Insurance Brokers; a licensed agent will reach ' + esc(firstName()) + ' at ' + esc(lead.phone) + ' or ' + esc(lead.email) + ' with their best rates.') + '</p><p style="margin-top:14px;"><button class="b sec" onclick="MaxLead.restart()">' + (isGuest() ? 'Start another quote' : 'Refer another customer') + '</button></p></div>';
         scrollDown();
         try { localStorage.removeItem('maxLeadDraft'); } catch (e) {}
     }
-    function restart() { if (!(auth && auth.access_token)) return loginScreen(); if (step > 0 && !confirm('Start over?')) return; lead = blank(); start(); }
+    function restart() { if (!loggedIn() && !isGuest()) return welcomeScreen(); if (step > 0 && !confirm('Start over?')) return; lead = blank(); start(); }
 
     // ── Auto dealer sign-up ──────────────────────────────────────
     // A dealership salesperson registers so the office can set them up as a
@@ -446,7 +478,8 @@
             '<div class="terms"><b>Referral partner disclaimer</b>' + PARTNER_TERMS.map((x) => '<p>' + x + '</p>').join('') + '</div>' +
             '<label class="ack"><input type="checkbox" id="d_ack"><span>I have read and understand the disclaimer above, and I acknowledge that by signing up I become a marketing agent for Universal Insurance Brokers under these terms.</span></label>' +
             '<button class="b ok big" id="d_send" onclick="MaxLead.submitDealer()">Create account</button>' +
-            '<button class="b sec big" onclick="MaxLead.toLogin()">I already have an account</button>');
+            '<button class="b sec big" onclick="MaxLead.toLogin()">I already have an account</button>' +
+            '<div class="links"><a href="#" onclick="MaxLead.welcome();return false;">&larr; Back</a><a href="#" onclick="MaxLead.continueAsGuest();return false;">Continue as guest</a></div>');
         step = 0; setTimeout(() => $('d_name').focus(), 50);
     }
     async function submitDealer() {
@@ -466,7 +499,7 @@
         const text = ['NEW AUTO DEALER SIGN-UP — MAX app', 'Received: ' + new Date().toLocaleString('en-US'), '', 'Name: ' + d.name, 'Dealership: ' + (d.dealership || '—'), 'Address: ' + (d.address || '—'), 'Phone: ' + d.phone, 'Email (login): ' + d.email, '', 'Referral partner disclaimer acknowledged: ' + d.agreed_terms_at].join('\n');
         try { await fetch(INQUIRY_FN, { method: 'POST', headers: HEADERS, body: JSON.stringify({ subject, text, html: '<pre style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;white-space:pre-wrap;">' + esc(text) + '</pre>', replyTo: d.email, source: 'dealer-signup', lead: Object.assign({ type: 'dealer' }, d) }) }); } catch (e) { /* ignore */ }
         haptic('success');
-        if (outcome === 'active') { lead = blank(); return start(); }
+        if (outcome === 'active') { setGuest(false); lead = blank(); return start(); }
         $('log').innerHTML = '<div class="done"><div class="big-check">✉</div><h2>Check your email</h2><p>We sent a confirmation link to <b>' + esc(d.email) + '</b>. Tap it, then come back here and log in with your email and password.</p><p style="margin-top:14px;"><button class="b pri" onclick="MaxLead.toLogin()">Go to log in</button></p></div>';
         window.scrollTo({ top: 0 });
     }
@@ -480,7 +513,7 @@
         document.documentElement.classList.add('native');
         document.querySelectorAll('a[href="/privacy"]').forEach((a) => { a.setAttribute('href', PRIVACY_HREF); a.removeAttribute('target'); });
         try { if (Plug.StatusBar) { Plug.StatusBar.setStyle({ style: 'DARK' }).catch(() => {}); Plug.StatusBar.setBackgroundColor({ color: '#0d1f3c' }).catch(() => {}); } } catch (e) { /* iOS has no setBackgroundColor */ }
-        try { if (Plug.App) Plug.App.addListener('backButton', () => { if ($('signupForm')) loginScreen(); else Plug.App.minimizeApp(); }); } catch (e) { /* ignore */ }
+        try { if (Plug.App) Plug.App.addListener('backButton', () => { if ($('signupForm') || $('loginForm')) welcomeScreen(); else Plug.App.minimizeApp(); }); } catch (e) { /* ignore */ }
         try { if (Plug.SplashScreen) setTimeout(() => Plug.SplashScreen.hide().catch(() => {}), 150); } catch (e) { /* ignore */ }
     }
     // Offline notice: the bundled app opens without a connection, but MAX
@@ -490,5 +523,5 @@
     document.addEventListener('DOMContentLoaded', () => { initNative(); onlineState(); boot(); });
     window.addEventListener('hashchange', () => { if (/type=recovery/.test(location.hash)) boot(); });   // reset link opened in an already-open tab
 
-    window.MaxLead = { enter: onEnter, login, logout: logOut, forgot, toLogin, saveNewPassword, savePhone, saveEmail, fmtPhone, pick, fileChosen, keepVIN, vinHint, confirmDL, typeDL, saveTypedDL, typeVIN, saveTypedVIN, skipVIN, submit, restart, dealerSignup, submitDealer, get lead() { return lead; }, get user() { return me(); } };
+    window.MaxLead = { enter: onEnter, login, logout: logOut, forgot, toLogin, welcome: welcomeScreen, chooseLogin, chooseSignup, continueAsGuest, saveNewPassword, savePhone, saveEmail, fmtPhone, pick, fileChosen, keepVIN, vinHint, confirmDL, typeDL, saveTypedDL, typeVIN, saveTypedVIN, skipVIN, submit, restart, dealerSignup, submitDealer, get lead() { return lead; }, get user() { return me(); } };
 })();

@@ -57,6 +57,7 @@
         .form .err { color: var(--red); font-size:13px; font-weight:600; }
         .form .ok-note { background:#ecfdf5; border:1px solid #a7f3d0; color:#065f46; border-radius:10px; padding:10px 12px; font-size:13.5px; line-height:1.45; }
         .form .links { display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; font-size:13.5px; margin-top:2px; }
+        #welcomeForm .b.big + .b.big { margin-top:-2px; }
         .form .links a { color: var(--blue); font-weight:600; text-decoration:none; }
         .form .terms { background: var(--gray-50); border:1px solid var(--gray-200); border-radius:10px; padding:10px 12px; font-size:12.5px; line-height:1.45; color: var(--gray-700); }
         .form .terms b { color: var(--navy); }
@@ -119,6 +120,7 @@
         .b.big { width:100%; padding:15px 18px; font-size:16px; }
         .chips { display:flex; gap:8px; flex-wrap:wrap; }
         .chips .b { flex:1 1 auto; }
+        #welcomeChoices .b { white-space:normal; line-height:1.25; }
         .row .dob-lbl { font-size:12.5px; font-weight:700; color: var(--gray-700); margin:-2px 0 -6px 2px; }
         .row input[type=date] { min-height:48px; -webkit-appearance:none; appearance:none; color: var(--gray-900); }
         .hdr .short { display:none; } @media (max-width: 480px) { .hdr .full { display:none; } .hdr .short { display:inline; font-size:16px; line-height:1; } }
@@ -140,7 +142,7 @@
     <img src="/icon.png" alt="UIB">
     <div class="txtblk"><div class="t">MAX <span style="font-weight:500;opacity:.8;">by UIB</span></div><div class="s">Universal Insurance Brokers · Marketing partners</div></div>
     <div class="spacer"></div>
-    <button type="button" class="dealer" id="hdrAccount" style="display:none;" onclick="MaxLead.logout()">Log out</button>
+    <button type="button" class="dealer" id="hdrAccount" style="display:none;">Log out</button>
     <button type="button" class="restart" style="display:none;" onclick="MaxLead.restart()" title="Start over"><span class="full">Start over</span><span class="short">↺</span></button>
 </div>
 
@@ -152,7 +154,7 @@
             <div class="neck"></div>
             <div class="body"><div class="core"></div></div>
         </div>
-        <div class="txt"><b>Refer a customer in 2 minutes</b><span>Snap their license and VIN. A licensed UIB agent calls them with the best rates.</span></div>
+        <div class="txt"><b>A car insurance quote in 2 minutes</b><span>Snap a license and a VIN. A licensed UIB agent calls back with the best rates.</span></div>
     </div>
     <div id="offline" style="display:none;background:#fef3c7;color:#92400e;border:1px solid #fcd34d;border-radius:10px;padding:8px 12px;font-size:13px;margin:0 0 10px;">You're offline. MAX can't read photos or send your request until you reconnect, but you can keep going.</div>
     <div class="steps" id="steps"></div>
@@ -165,6 +167,6 @@
     <input type="file" id="fileUpload" accept="image/*" style="display:none;" onchange="MaxLead.fileChosen(this)">
 </div>
 
-<script src="/max.js?v=20261007f"></script>
+<script src="/max.js?v=20261007h"></script>
 </body>
 </html>

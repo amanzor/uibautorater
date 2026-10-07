@@ -143,7 +143,7 @@
         else { btn.style.display = 'none'; if (sub) sub.textContent = 'Universal Insurance Brokers · Marketing partners'; if (rs) rs.style.display = 'none'; }
         if (loggedIn()) btn.onclick = () => MaxLead.logout();
     }
-    function formShell(id, title, intro, body) { $('steps').innerHTML = ''; compose(''); $('log').innerHTML = '<div class="form" id="' + id + '"><h2>' + title + '</h2><p>' + intro + '</p>' + body + '<div class="err" id="f_err" style="display:none;"></div></div>'; window.scrollTo({ top: 0 }); }
+    function formShell(id, title, intro, body) { cur = ''; $('steps').innerHTML = ''; compose(''); $('log').innerHTML = '<div class="form" id="' + id + '"><h2>' + title + '</h2><p>' + intro + '</p>' + body + '<div class="err" id="f_err" style="display:none;"></div></div>'; window.scrollTo({ top: 0 }); }
     function showErr(text) { const e = $('f_err'); if (!e) return; e.innerHTML = text; e.style.display = ''; }
     // MAX greets and offers the three ways in, as chat bubbles with reply buttons.
     async function welcomeScreen() {
@@ -208,6 +208,26 @@
         welcomeScreen();
     }
 
+    // ── back navigation ──────────────────────────────────────────
+    // Each composer panel registers which step it belongs to; "← Back"
+    // re-asks the previous step without losing what was already entered.
+    let cur = '';
+    const PREV = { dlType: 'dl', dlConfirm: 'dl', vin: 'dl', vinType: 'vin', vinBad: 'vin', phone: 'vin', email: 'phone' };
+    function withBack(html, key) {
+        cur = key;
+        const canBack = !!PREV[key] || (key === 'dl' && isGuest());
+        return canBack ? html + '<div class="links" style="justify-content:center;margin-top:8px;"><a href="#" class="back-link" onclick="MaxLead.back();return false;">&larr; Back</a></div>' : html;
+    }
+    async function back() {
+        if (busy) return;
+        const to = PREV[cur];
+        if (!to) { if (cur === 'dl' && isGuest()) { msg('user', 'Back'); return welcomeScreen(); } return; }
+        msg('user', 'Back');
+        if (to === 'dl') { step = 0; progress(); await say(isGuest() ? 'No problem — back to your license.' : 'No problem — back to the customer\'s license.'); return composeDL(); }
+        if (to === 'vin') { step = 1; progress(); await say('Back to the car\'s VIN.'); return composeVIN(); }
+        if (to === 'phone') { return askPhone(); }
+    }
+
     // ── steps ────────────────────────────────────────────────────
     async function start(opts) {
         setHeader(); opts = opts || {};
@@ -229,15 +249,15 @@
     async function askPhone() {
         step = 2; progress();
         await say(isGuest() ? 'Almost done, ' + esc(firstName()) + '. What\'s the best phone number for the agent to reach you?' : 'Almost done. What\'s the best phone number for the agent to reach ' + esc(firstName()) + '?');
-        compose('<div class="row"><input type="tel" id="in" inputmode="tel" placeholder="(305) 555-1234" autocomplete="tel" maxlength="14" value="' + esc(lead.phone) + '" oninput="this.value=MaxLead.fmtPhone(this.value)" onkeydown="MaxLead.enter(event, MaxLead.savePhone)"><button class="b pri" onclick="MaxLead.savePhone()">Next</button></div>');
+        compose(withBack('<div class="row"><input type="tel" id="in" inputmode="tel" placeholder="(305) 555-1234" autocomplete="tel" maxlength="14" value="' + esc(lead.phone) + '" oninput="this.value=MaxLead.fmtPhone(this.value)" onkeydown="MaxLead.enter(event, MaxLead.savePhone)"><button class="b pri" onclick="MaxLead.savePhone()">Next</button></div>', 'phone'));
     }
     async function savePhone() {
         const v = fmtPhone($('in').value); if (v.replace(/\D/g, '').length !== 10) { msg('bot err', 'Please enter a 10-digit phone number.'); $('in').focus(); return; }
         lead.phone = v; msg('user', esc(v)); step = 3; progress();
         await say(isGuest() ? 'And your email address? The quote goes there too.' : 'And ' + esc(firstName()) + '\'s email address? The quote goes there too.');
-        compose('<div class="row"><input type="email" id="in" inputmode="email" placeholder="name@example.com" autocomplete="email" value="' + esc(lead.email) + '" onkeydown="MaxLead.enter(event, MaxLead.saveEmail)"><button class="b ok" id="sendBtn" onclick="MaxLead.saveEmail()">Send</button></div>' +
+        compose(withBack('<div class="row"><input type="email" id="in" inputmode="email" placeholder="name@example.com" autocomplete="email" value="' + esc(lead.email) + '" onkeydown="MaxLead.enter(event, MaxLead.saveEmail)"><button class="b ok" id="sendBtn" onclick="MaxLead.saveEmail()">Send</button></div>' +
             (isGuest() ? '<p class="consent">By tapping <b>Send</b> you agree to be contacted by Universal Insurance Brokers by phone, text or email about this quote, and you accept the <a href="' + PRIVACY_HREF + '" target="_blank">privacy policy</a>.</p>'
-                       : '<p class="consent">By tapping <b>Send</b> you confirm that ' + esc(firstName()) + ' agrees to be contacted by Universal Insurance Brokers by phone, text or email about this quote, and has seen the <a href="' + PRIVACY_HREF + '" target="_blank">privacy policy</a>.</p>'));
+                       : '<p class="consent">By tapping <b>Send</b> you confirm that ' + esc(firstName()) + ' agrees to be contacted by Universal Insurance Brokers by phone, text or email about this quote, and has seen the <a href="' + PRIVACY_HREF + '" target="_blank">privacy policy</a>.</p>'), 'email'));
     }
     async function saveEmail() {
         const v = ($('in').value || '').trim(); if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) { msg('bot err', 'That email doesn\'t look right. Please check it.'); $('in').focus(); return; }
@@ -253,10 +273,10 @@
     function firstOf(s) { return String(s || '').trim().split(' ')[0]; }
     function firstName() { return firstOf(lead.name) || (isGuest() ? 'there' : 'the customer'); }
     function composeDL() {
-        compose('<div class="chips"><button class="b pri big" id="camBtn" style="flex:1 1 55%;" onclick="MaxLead.pick(\'dl\', \'camera\')">📷 Take a photo of the license</button><button class="b pri big" id="upBtn" style="flex:1 1 40%;background:linear-gradient(to right,#0e7490,#06b6d4);" onclick="MaxLead.pick(\'dl\', \'upload\')">🖼️ Upload a photo</button></div><div class="chips" style="margin-top:8px;"><button class="b sec" onclick="MaxLead.typeDL()">Type it instead</button></div>');
+        compose(withBack('<div class="chips"><button class="b pri big" id="camBtn" style="flex:1 1 55%;" onclick="MaxLead.pick(\'dl\', \'camera\')">📷 Take a photo of the license</button><button class="b pri big" id="upBtn" style="flex:1 1 40%;background:linear-gradient(to right,#0e7490,#06b6d4);" onclick="MaxLead.pick(\'dl\', \'upload\')">🖼️ Upload a photo</button></div><div class="chips" style="margin-top:8px;"><button class="b sec" onclick="MaxLead.typeDL()">Type it instead</button>' + (lead.dl ? '<button class="b ok" onclick="MaxLead.keepDL()">Keep ' + esc(firstOf(lead.name) || 'this') + '\'s license &amp; continue</button>' : '') + '</div>', 'dl'));
     }
     function typeDL() {
-        compose('<div class="row" style="flex-wrap:wrap;"><input type="text" id="nm" placeholder="' + (isGuest() ? 'Your first and last name' : 'Customer\'s first and last name') + '" autocomplete="off" value="' + esc(lead.name) + '" style="flex:1 1 100%;"><label class="dob-lbl" for="dob" style="flex:1 1 100%;">Date of birth</label><input type="date" id="dob" max="' + today() + '" style="flex:1 1 100%;"><label class="dob-lbl" for="dls" style="flex:1 1 100%;">Driver\'s license state <span style="font-weight:500;color:var(--gray-500);">(optional)</span></label><select id="dls" style="flex:1 1 100%;"><option value="">— Not sure —</option>' + US_STATES.map((s) => '<option value="' + s + '"' + (s === 'FL' ? ' selected' : '') + '>' + s + '</option>').join('') + '</select><input type="text" id="dln" placeholder="DL number (optional)" autocapitalize="characters" autocomplete="off" style="flex:1 1 100%;"><button class="b pri" style="flex:1" onclick="MaxLead.saveTypedDL()">Next</button></div>');
+        compose(withBack('<div class="row" style="flex-wrap:wrap;"><input type="text" id="nm" placeholder="' + (isGuest() ? 'Your first and last name' : 'Customer\'s first and last name') + '" autocomplete="off" value="' + esc(lead.name) + '" style="flex:1 1 100%;"><label class="dob-lbl" for="dob" style="flex:1 1 100%;">Date of birth</label><input type="date" id="dob" max="' + today() + '" style="flex:1 1 100%;"><label class="dob-lbl" for="dls" style="flex:1 1 100%;">Driver\'s license state <span style="font-weight:500;color:var(--gray-500);">(optional)</span></label><select id="dls" style="flex:1 1 100%;"><option value="">— Not sure —</option>' + US_STATES.map((s) => '<option value="' + s + '"' + (s === 'FL' ? ' selected' : '') + '>' + s + '</option>').join('') + '</select><input type="text" id="dln" placeholder="DL number (optional)" autocapitalize="characters" autocomplete="off" style="flex:1 1 100%;"><button class="b pri" style="flex:1" onclick="MaxLead.saveTypedDL()">Next</button></div>', 'dlType'));
     }
     async function saveTypedDL() {
         const nm = ($('nm').value || '').trim(); const dob = ($('dob').value || '').trim(); const dln = ($('dln').value || '').trim(); const dls = ($('dls') && $('dls').value) || '';
@@ -274,10 +294,10 @@
         composeVIN();
     }
     function composeVIN() {
-        compose('<div class="chips"><button class="b pur big" id="camBtn" style="flex:1 1 55%;" onclick="MaxLead.pick(\'vin\', \'camera\')">📷 Take a photo of the VIN</button><button class="b pur big" id="upBtn" style="flex:1 1 40%;background:linear-gradient(to right,#0e7490,#06b6d4);" onclick="MaxLead.pick(\'vin\', \'upload\')">🖼️ Upload a picture of the VIN</button></div><div class="chips" style="margin-top:8px;"><button class="b sec" onclick="MaxLead.typeVIN()">Type the VIN</button><button class="b sec" onclick="MaxLead.skipVIN()">Skip for now</button></div>');
+        compose(withBack('<div class="chips"><button class="b pur big" id="camBtn" style="flex:1 1 55%;" onclick="MaxLead.pick(\'vin\', \'camera\')">📷 Take a photo of the VIN</button><button class="b pur big" id="upBtn" style="flex:1 1 40%;background:linear-gradient(to right,#0e7490,#06b6d4);" onclick="MaxLead.pick(\'vin\', \'upload\')">🖼️ Upload a picture of the VIN</button></div><div class="chips" style="margin-top:8px;"><button class="b sec" onclick="MaxLead.typeVIN()">Type the VIN</button><button class="b sec" onclick="MaxLead.skipVIN()">Skip for now</button></div>', 'vin'));
     }
     function typeVIN() {
-        compose('<div class="row"><input type="text" id="in" placeholder="17-character VIN" maxlength="17" autocapitalize="characters" autocomplete="off" spellcheck="false" value="' + esc(lead.vin || '') + '" style="text-transform:uppercase;letter-spacing:1px;font-family:ui-monospace,Menlo,Consolas,monospace;" oninput="MaxLead.vinHint(this)" onkeydown="MaxLead.enter(event, MaxLead.saveTypedVIN)"><button class="b pri" onclick="MaxLead.saveTypedVIN()">Decode</button></div><p class="consent" id="vinHint">17 letters and numbers, no I, O or Q.</p>');
+        compose(withBack('<div class="row"><input type="text" id="in" placeholder="17-character VIN" maxlength="17" autocapitalize="characters" autocomplete="off" spellcheck="false" value="' + esc(lead.vin || '') + '" style="text-transform:uppercase;letter-spacing:1px;font-family:ui-monospace,Menlo,Consolas,monospace;" oninput="MaxLead.vinHint(this)" onkeydown="MaxLead.enter(event, MaxLead.saveTypedVIN)"><button class="b pri" onclick="MaxLead.saveTypedVIN()">Decode</button></div><p class="consent" id="vinHint">17 letters and numbers, no I, O or Q.</p>', 'vinType'));
     }
     function vinHint(inp) { const v = (inp.value || '').toUpperCase().replace(/[^A-HJ-NPR-Z0-9]/g, ''); const h = $('vinHint'); if (!h) return; h.textContent = v.length === 17 ? (vinCheckDigit(v) ? 'Looks good — tap Decode.' : 'Check digit does not match; double-check the characters.') : v.length + ' / 17 characters' + (/[IOQ]/i.test(inp.value) ? ' — VINs never contain I, O or Q' : ''); }
     // ISO 3779 check digit (position 9) used on North American VINs.
@@ -323,13 +343,14 @@
         }
         if (dec && dec.bad) {
             await say('The VIN decoder could not verify <b>' + esc(vin) + '</b>' + (dec.error ? ' (' + esc(dec.error) + ')' : '') + '. Please check it against the door sticker or registration.');
-            compose('<div class="chips"><button class="b pri" onclick="MaxLead.typeVIN()">Fix the VIN</button><button class="b sec" onclick="MaxLead.pick(\'vin\', \'camera\')">📷 Retake photo</button><button class="b sec" onclick="MaxLead.keepVIN()">Use it anyway</button></div>');
+            compose(withBack('<div class="chips"><button class="b pri" onclick="MaxLead.typeVIN()">Fix the VIN</button><button class="b sec" onclick="MaxLead.pick(\'vin\', \'camera\')">📷 Retake photo</button><button class="b sec" onclick="MaxLead.keepVIN()">Use it anyway</button></div>', 'vinBad'));
             return;
         }
         await say('Got the VIN ' + esc(vin) + ' (the decoder is not reachable right now, so the agent will look up the vehicle).');
         await afterVIN();
     }
     async function keepVIN() { msg('user', 'Use it anyway'); await afterVIN(); }
+    async function keepDL() { msg('user', 'Keep the license'); await afterDL(); }
     function titleCase(s) { return String(s || '').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()); }
     async function afterVIN() { await askPhone(); }
 
@@ -379,7 +400,7 @@
                 lead.dl = data; lead.dlPhoto = im; haptic('success');
                 if (data.address) lead.address = data.address;
                 await say('I read: <b>' + esc([data.firstName, data.middleName, data.lastName].filter(Boolean).join(' ')) + '</b>' + (data.dob ? ', born ' + esc(fmtDate(data.dob)) : '') + (data.dlNumber ? ', license ' + esc(data.dlNumber) : '') + '. Is that right?');
-                compose('<div class="chips"><button class="b ok" onclick="MaxLead.confirmDL(true)">Yes, correct</button><button class="b sec" onclick="MaxLead.confirmDL(false)">Retake photo</button></div>');
+                compose(withBack('<div class="chips"><button class="b ok" onclick="MaxLead.confirmDL(true)">Yes, correct</button><button class="b sec" onclick="MaxLead.confirmDL(false)">Retake photo</button></div>', 'dlConfirm'));
             } else {
                 const vin = String((data && data.vin) || '').toUpperCase().replace(/[^A-HJ-NPR-Z0-9]/g, '');
                 if (vin.length !== 17) { await say('I couldn\'t make out a full 17-character VIN. Try a closer, straight-on photo, or type it.'); composeVIN(); busy = false; return; }
@@ -524,5 +545,5 @@
     document.addEventListener('DOMContentLoaded', () => { initNative(); onlineState(); boot(); });
     window.addEventListener('hashchange', () => { if (/type=recovery/.test(location.hash)) boot(); });   // reset link opened in an already-open tab
 
-    window.MaxLead = { enter: onEnter, login, logout: logOut, forgot, toLogin, welcome: welcomeScreen, chooseLogin, chooseSignup, continueAsGuest, saveNewPassword, savePhone, saveEmail, fmtPhone, pick, fileChosen, keepVIN, vinHint, confirmDL, typeDL, saveTypedDL, typeVIN, saveTypedVIN, skipVIN, submit, restart, dealerSignup, submitDealer, get lead() { return lead; }, get user() { return me(); } };
+    window.MaxLead = { enter: onEnter, back, keepDL, login, logout: logOut, forgot, toLogin, welcome: welcomeScreen, chooseLogin, chooseSignup, continueAsGuest, saveNewPassword, savePhone, saveEmail, fmtPhone, pick, fileChosen, keepVIN, vinHint, confirmDL, typeDL, saveTypedDL, typeVIN, saveTypedVIN, skipVIN, submit, restart, dealerSignup, submitDealer, get lead() { return lead; }, get user() { return me(); } };
 })();

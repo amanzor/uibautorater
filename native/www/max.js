@@ -207,21 +207,27 @@
         lead.email = v; lead.consent = true; msg('user', esc(v)); step = 4; progress();
         await submit();
     }
+    // Dates: stored as YYYY-MM-DD, shown as MM/DD/YYYY. isoDate() accepts the
+    // date picker's value or a typed MM/DD/YYYY (browsers without a picker).
+    function today() { return new Date().toISOString().slice(0, 10); }
+    function isoDate(v) { v = String(v || '').trim(); let m = v.match(/^(\d{4})-(\d{2})-(\d{2})$/); if (m) return v; m = v.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/); return m ? m[3] + '-' + m[1].padStart(2, '0') + '-' + m[2].padStart(2, '0') : ''; }
+    function fmtDate(iso) { const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? m[2] + '/' + m[3] + '/' + m[1] : (iso || ''); }
     function firstOf(s) { return String(s || '').trim().split(' ')[0]; }
     function firstName() { return firstOf(lead.name) || 'the customer'; }
     function composeDL() {
-        compose('<button class="b pri big" onclick="MaxLead.pick(\'dl\')">📷 Photo of the customer\'s license</button><div class="chips" style="margin-top:8px;"><button class="b sec" onclick="MaxLead.typeDL()">Type it instead</button></div>');
+        compose('<div class="chips"><button class="b pri big" id="camBtn" style="flex:1 1 55%;" onclick="MaxLead.pick(\'dl\', \'camera\')">📷 Take a photo of the license</button><button class="b pri big" id="upBtn" style="flex:1 1 40%;background:linear-gradient(to right,#0e7490,#06b6d4);" onclick="MaxLead.pick(\'dl\', \'upload\')">🖼️ Upload a photo</button></div><div class="chips" style="margin-top:8px;"><button class="b sec" onclick="MaxLead.typeDL()">Type it instead</button></div>');
     }
     function typeDL() {
-        compose('<div class="row" style="flex-wrap:wrap;"><input type="text" id="nm" placeholder="Customer\'s first and last name" autocomplete="off" value="' + esc(lead.name) + '" style="flex:1 1 100%;"><input type="text" id="dob" placeholder="Date of birth (MM/DD/YYYY)" inputmode="numeric" style="flex:1 1 100%;"><input type="text" id="dln" placeholder="License number (optional)" style="flex:1 1 100%;"><button class="b pri" style="flex:1" onclick="MaxLead.saveTypedDL()">Next</button></div>');
+        compose('<div class="row" style="flex-wrap:wrap;"><input type="text" id="nm" placeholder="Customer\'s first and last name" autocomplete="off" value="' + esc(lead.name) + '" style="flex:1 1 100%;"><label class="dob-lbl" for="dob" style="flex:1 1 100%;">Date of birth</label><input type="date" id="dob" max="' + today() + '" style="flex:1 1 100%;"><input type="text" id="dln" placeholder="License number (optional)" style="flex:1 1 100%;"><button class="b pri" style="flex:1" onclick="MaxLead.saveTypedDL()">Next</button></div>');
     }
     async function saveTypedDL() {
         const nm = ($('nm').value || '').trim(); const dob = ($('dob').value || '').trim(); const dln = ($('dln').value || '').trim();
         if (nm.length < 2) { msg('bot err', 'Please type the customer\'s first and last name.'); $('nm').focus(); return; }
-        const m = dob.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/); if (!m) { msg('bot err', 'Please type the date of birth as MM/DD/YYYY.'); return; }
+        const iso = isoDate(dob); if (!iso) { msg('bot err', 'Please pick the date of birth.'); $('dob').focus(); return; }
+        if (new Date(iso) > new Date()) { msg('bot err', 'The date of birth cannot be in the future.'); return; }
         lead.name = nm; const parts = nm.split(' ');
-        lead.dl = { firstName: parts[0] || '', lastName: parts.slice(1).join(' '), dob: m[3] + '-' + m[1].padStart(2, '0') + '-' + m[2].padStart(2, '0'), dlNumber: dln.toUpperCase(), dlState: 'FL' };
-        msg('user', esc(nm) + ', DOB ' + esc(dob) + (dln ? ', DL ' + esc(dln) : ''));
+        lead.dl = { firstName: parts[0] || '', lastName: parts.slice(1).join(' '), dob: iso, dlNumber: dln.toUpperCase(), dlState: 'FL' };
+        msg('user', esc(nm) + ', DOB ' + esc(fmtDate(iso)) + (dln ? ', DL ' + esc(dln) : ''));
         await afterDL();
     }
     async function afterDL() {
@@ -230,10 +236,18 @@
         composeVIN();
     }
     function composeVIN() {
-        compose('<button class="b pur big" onclick="MaxLead.pick(\'vin\')">📷 Photo of the car\'s VIN</button><div class="chips" style="margin-top:8px;"><button class="b sec" onclick="MaxLead.typeVIN()">Type the VIN</button><button class="b sec" onclick="MaxLead.skipVIN()">Skip for now</button></div>');
+        compose('<div class="chips"><button class="b pur big" id="camBtn" style="flex:1 1 55%;" onclick="MaxLead.pick(\'vin\', \'camera\')">📷 Take a photo of the VIN</button><button class="b pur big" id="upBtn" style="flex:1 1 40%;background:linear-gradient(to right,#0e7490,#06b6d4);" onclick="MaxLead.pick(\'vin\', \'upload\')">🖼️ Upload a photo</button></div><div class="chips" style="margin-top:8px;"><button class="b sec" onclick="MaxLead.typeVIN()">Type the VIN</button><button class="b sec" onclick="MaxLead.skipVIN()">Skip for now</button></div>');
     }
     function typeVIN() {
-        compose('<div class="row"><input type="text" id="in" placeholder="17-character VIN" maxlength="17" style="text-transform:uppercase;letter-spacing:1px;" onkeydown="MaxLead.enter(event, MaxLead.saveTypedVIN)"><button class="b pri" onclick="MaxLead.saveTypedVIN()">Next</button></div>');
+        compose('<div class="row"><input type="text" id="in" placeholder="17-character VIN" maxlength="17" autocapitalize="characters" autocomplete="off" spellcheck="false" value="' + esc(lead.vin || '') + '" style="text-transform:uppercase;letter-spacing:1px;font-family:ui-monospace,Menlo,Consolas,monospace;" oninput="MaxLead.vinHint(this)" onkeydown="MaxLead.enter(event, MaxLead.saveTypedVIN)"><button class="b pri" onclick="MaxLead.saveTypedVIN()">Decode</button></div><p class="consent" id="vinHint">17 letters and numbers, no I, O or Q.</p>');
+    }
+    function vinHint(inp) { const v = (inp.value || '').toUpperCase().replace(/[^A-HJ-NPR-Z0-9]/g, ''); const h = $('vinHint'); if (!h) return; h.textContent = v.length === 17 ? (vinCheckDigit(v) ? 'Looks good — tap Decode.' : 'Check digit does not match; double-check the characters.') : v.length + ' / 17 characters' + (/[IOQ]/i.test(inp.value) ? ' — VINs never contain I, O or Q' : ''); }
+    // ISO 3779 check digit (position 9) used on North American VINs.
+    function vinCheckDigit(vin) {
+        const map = { A: 1, B: 2, C: 3, D: 4, E: 5, F: 6, G: 7, H: 8, J: 1, K: 2, L: 3, M: 4, N: 5, P: 7, R: 9, S: 2, T: 3, U: 4, V: 5, W: 6, X: 7, Y: 8, Z: 9 };
+        const w = [8, 7, 6, 5, 4, 3, 2, 10, 0, 9, 8, 7, 6, 5, 4, 3, 2]; let sum = 0;
+        for (let i = 0; i < 17; i++) { const c = vin[i]; const n = /\d/.test(c) ? parseInt(c, 10) : (map[c] || 0); sum += n * w[i]; }
+        const cd = sum % 11; return (cd === 10 ? 'X' : String(cd)) === vin[8];
     }
     async function saveTypedVIN() {
         const v = ($('in').value || '').toUpperCase().replace(/[^A-HJ-NPR-Z0-9]/g, '');
@@ -241,40 +255,66 @@
         msg('user', esc(v)); await useVIN(v);
     }
     async function skipVIN() { msg('user', 'Skip for now'); lead.vin = ''; lead.vehicle = null; await afterVIN(); }
+    // VIN decoder (NHTSA vPIC, free, no key). Returns the decoded vehicle or
+    // null, plus the decoder's own verdict on the VIN itself.
+    async function decodeVIN(vin) {
+        const r = await fetch('https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVinValues/' + encodeURIComponent(vin) + '?format=json');
+        const j = await r.json(); const d = (j.Results && j.Results[0]) || {};
+        const codes = String(d.ErrorCode || '').split(',').map((x) => x.trim()).filter(Boolean);
+        const bad = codes.some((c) => c !== '0' && c !== '6');          // 6 = incomplete VIN decode, still usable
+        const engine = [d.DisplacementL ? (Math.round(parseFloat(d.DisplacementL) * 10) / 10) + 'L' : '', d.EngineCylinders ? d.EngineCylinders + '-cyl' : '', d.EngineHP ? d.EngineHP + ' hp' : ''].filter(Boolean).join(' ');
+        const vehicle = d.Make ? { year: d.ModelYear || '', make: titleCase(d.Make), model: d.Model || '', trim: d.Trim || d.Series || '', body: d.BodyClass || '', doors: d.Doors || '', engine, fuel: d.FuelTypePrimary || '', drive: d.DriveType || '', transmission: d.TransmissionStyle || '', type: d.VehicleType ? titleCase(d.VehicleType) : '', plant: [d.PlantCity ? titleCase(d.PlantCity) : '', d.PlantCountry ? titleCase(d.PlantCountry).replace(/\(Usa\)/, '(USA)') : ''].filter(Boolean).join(', '), checkDigitOk: !codes.includes('1') } : null;
+        return { vehicle, bad, error: bad ? String(d.ErrorText || '').split(';')[0].replace(/^\d+\s*-\s*/, '') : '' };
+    }
+    function vehicleCard(vin, v) {
+        const row = (k, val) => val ? '<div><b>' + k + ':</b> ' + esc(val) + '</div>' : '';
+        return '<div class="card"><div><b>VIN:</b> <span style="font-family:ui-monospace,Menlo,Consolas,monospace;letter-spacing:1px;">' + esc(vin) + '</span></div>' +
+            row('Vehicle', [v.year, v.make, v.model].filter(Boolean).join(' ')) + row('Trim', v.trim) + row('Body', [v.body, v.doors ? v.doors + '-door' : ''].filter(Boolean).join(', ')) +
+            row('Engine', [v.engine, v.fuel].filter(Boolean).join(', ')) + row('Drive', [v.drive, v.transmission].filter(Boolean).join(', ')) + row('Built in', v.plant) +
+            (v.checkDigitOk ? '' : '<div style="color:#92400e;"><b>Note:</b> the VIN\'s check digit does not match — please double-check it.</div>') + '</div>';
+    }
     async function useVIN(vin) {
-        lead.vin = vin; typing(true);
-        try {
-            const r = await fetch('https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVinValues/' + encodeURIComponent(vin) + '?format=json');
-            const j = await r.json(); const d = j.Results && j.Results[0];
-            if (d && d.Make) lead.vehicle = { year: d.ModelYear, make: titleCase(d.Make), model: d.Model, trim: [d.Trim, d.BodyClass].filter(Boolean).join(' / ') };
-        } catch (e) { /* offline: keep just the VIN */ }
+        lead.vin = vin; lead.vehicle = null; typing(true);
+        let dec = null;
+        try { dec = await decodeVIN(vin); } catch (e) { /* offline: keep just the VIN */ }
         typing(false);
-        if (lead.vehicle) await say('Got it — a <b>' + esc([lead.vehicle.year, lead.vehicle.make, lead.vehicle.model].filter(Boolean).join(' ')) + '</b>.');
-        else await say('Got the VIN ' + esc(vin) + '.');
+        if (dec && dec.vehicle) {
+            lead.vehicle = dec.vehicle; haptic('success');
+            await say('VIN decoded — a <b>' + esc([dec.vehicle.year, dec.vehicle.make, dec.vehicle.model].filter(Boolean).join(' ')) + '</b>.' + vehicleCard(vin, dec.vehicle));
+            return afterVIN();
+        }
+        if (dec && dec.bad) {
+            await say('The VIN decoder could not verify <b>' + esc(vin) + '</b>' + (dec.error ? ' (' + esc(dec.error) + ')' : '') + '. Please check it against the door sticker or registration.');
+            compose('<div class="chips"><button class="b pri" onclick="MaxLead.typeVIN()">Fix the VIN</button><button class="b sec" onclick="MaxLead.pick(\'vin\', \'camera\')">📷 Retake photo</button><button class="b sec" onclick="MaxLead.keepVIN()">Use it anyway</button></div>');
+            return;
+        }
+        await say('Got the VIN ' + esc(vin) + ' (the decoder is not reachable right now, so the agent will look up the vehicle).');
         await afterVIN();
     }
+    async function keepVIN() { msg('user', 'Use it anyway'); await afterVIN(); }
     function titleCase(s) { return String(s || '').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()); }
     async function afterVIN() { await askPhone(); }
 
     // ── photos → MAX reads them ──────────────────────────────────
-    function pick(kind) {
+    // how = 'camera' (take a new photo) or 'upload' (an existing photo / file)
+    function pick(kind, how) {
         pendingKind = kind;
-        if (NATIVE && Plug.Camera) return nativePhoto(kind);
-        const f = $('file'); f.value = ''; f.click();
+        if (NATIVE && Plug.Camera) return nativePhoto(kind, how);
+        const f = $(how === 'upload' ? 'fileUpload' : 'file'); f.value = ''; f.click();
     }
     // Native camera (App Store / Play Store builds): the phone's own camera
     // UI, orientation corrected, nothing saved to the gallery. "PROMPT" lets
     // the prospect choose between the camera and an existing photo.
-    async function nativePhoto(kind) {
+    async function nativePhoto(kind, how) {
         if (busy) return;
         let shot;
         try {
-            shot = await Plug.Camera.getPhoto({ quality: 90, width: 2000, height: 2000, resultType: 'base64', source: 'PROMPT', correctOrientation: true, saveToGallery: false, promptLabelHeader: kind === 'dl' ? "Driver's license" : 'VIN', promptLabelPhoto: 'Choose from photos', promptLabelPicture: 'Take a photo' });
+            shot = await Plug.Camera.getPhoto({ quality: 90, width: 2000, height: 2000, resultType: 'base64', source: how === 'upload' ? 'PHOTOS' : how === 'camera' ? 'CAMERA' : 'PROMPT', correctOrientation: true, saveToGallery: false, promptLabelHeader: kind === 'dl' ? "Driver's license" : 'VIN', promptLabelPhoto: 'Choose from photos', promptLabelPicture: 'Take a photo' });
         } catch (e) {
             const m = String((e && e.message) || e || '');
             if (/cancel/i.test(m)) return;                       // the prospect closed the camera
             if (/denied|permission/i.test(m)) { msg('bot err', 'MAX needs camera access to read the license. Allow it in your phone\'s Settings, or type the details instead.'); if (kind === 'dl') composeDL(); else composeVIN(); return; }
-            const f = $('file'); f.value = ''; f.click(); return;   // anything else: the browser picker
+            const f = $(how === 'upload' ? 'fileUpload' : 'file'); f.value = ''; f.click(); return;   // anything else: the browser picker
         }
         if (!shot || !shot.base64String) return;
         const media = 'image/' + ((shot.format || 'jpeg').replace('jpg', 'jpeg'));
@@ -300,7 +340,7 @@
                 if (!data || !(data.firstName || data.lastName || data.dob || data.dlNumber)) { await say('I couldn\'t read that clearly. Try again with more light, no glare, and the card filling the frame.'); composeDL(); busy = false; return; }
                 lead.dl = data; lead.dlPhoto = im; haptic('success');
                 if (data.address) lead.address = data.address;
-                await say('I read: <b>' + esc([data.firstName, data.middleName, data.lastName].filter(Boolean).join(' ')) + '</b>' + (data.dob ? ', born ' + esc(data.dob) : '') + (data.dlNumber ? ', license ' + esc(data.dlNumber) : '') + '. Is that right?');
+                await say('I read: <b>' + esc([data.firstName, data.middleName, data.lastName].filter(Boolean).join(' ')) + '</b>' + (data.dob ? ', born ' + esc(fmtDate(data.dob)) : '') + (data.dlNumber ? ', license ' + esc(data.dlNumber) : '') + '. Is that right?');
                 compose('<div class="chips"><button class="b ok" onclick="MaxLead.confirmDL(true)">Yes, correct</button><button class="b sec" onclick="MaxLead.confirmDL(false)">Retake photo</button></div>');
             } else {
                 const vin = String((data && data.vin) || '').toUpperCase().replace(/[^A-HJ-NPR-Z0-9]/g, '');
@@ -353,8 +393,9 @@
         return ['NEW LEAD — MAX app', 'Received: ' + new Date().toLocaleString('en-US'), '',
             'REFERRED BY', '  ' + (u.name || '—') + (u.dealership ? ' — ' + u.dealership : ''), '  ' + [u.phone, u.email].filter(Boolean).join('   '), '',
             'Name: ' + lead.name, 'Phone: ' + lead.phone, 'Email: ' + lead.email, '',
-            'DRIVER\'S LICENSE', '  Name on license: ' + ([d.firstName, d.middleName, d.lastName].filter(Boolean).join(' ') || '—'), '  DOB: ' + (d.dob || '—') + '   Sex: ' + (d.gender || '—'), '  DL #: ' + (d.dlNumber || '—') + '   State: ' + (d.dlState || '—') + '   Exp: ' + (d.expiration || '—'), '  Address: ' + (d.address || lead.address || '—'), '',
-            'VEHICLE', '  VIN: ' + (lead.vin || '— (skipped)'), '  ' + ([v.year, v.make, v.model, v.trim].filter(Boolean).join(' ') || ''), '',
+            'DRIVER\'S LICENSE', '  Name on license: ' + ([d.firstName, d.middleName, d.lastName].filter(Boolean).join(' ') || '—'), '  DOB: ' + (d.dob ? fmtDate(d.dob) : '—') + '   Sex: ' + (d.gender || '—'), '  DL #: ' + (d.dlNumber || '—') + '   State: ' + (d.dlState || '—') + '   Exp: ' + (d.expiration || '—'), '  Address: ' + (d.address || lead.address || '—'), '',
+            'VEHICLE', '  VIN: ' + (lead.vin || '— (skipped)'), '  ' + ([v.year, v.make, v.model, v.trim].filter(Boolean).join(' ') || (lead.vin ? '(not decoded)' : '')),
+            ...(v.make ? ['  Body: ' + ([v.body, v.doors ? v.doors + '-door' : ''].filter(Boolean).join(', ') || '—'), '  Engine: ' + ([v.engine, v.fuel].filter(Boolean).join(', ') || '—'), '  Drive: ' + ([v.drive, v.transmission].filter(Boolean).join(', ') || '—'), '  Built in: ' + (v.plant || '—')] : []), '',
             'Consent to contact: yes (agreed in the app)', '',
             (lead.dlPhoto ? 'License photo attached. ' : '') + (lead.vinPhoto ? 'VIN photo attached.' : '')].join('\n');
     }
@@ -444,5 +485,5 @@
     document.addEventListener('DOMContentLoaded', () => { initNative(); onlineState(); boot(); });
     window.addEventListener('hashchange', () => { if (/type=recovery/.test(location.hash)) boot(); });   // reset link opened in an already-open tab
 
-    window.MaxLead = { enter: onEnter, login, logout: logOut, forgot, toLogin, saveNewPassword, savePhone, saveEmail, fmtPhone, pick, fileChosen, confirmDL, typeDL, saveTypedDL, typeVIN, saveTypedVIN, skipVIN, submit, restart, dealerSignup, submitDealer, get lead() { return lead; }, get user() { return me(); } };
+    window.MaxLead = { enter: onEnter, login, logout: logOut, forgot, toLogin, saveNewPassword, savePhone, saveEmail, fmtPhone, pick, fileChosen, keepVIN, vinHint, confirmDL, typeDL, saveTypedDL, typeVIN, saveTypedVIN, skipVIN, submit, restart, dealerSignup, submitDealer, get lead() { return lead; }, get user() { return me(); } };
 })();

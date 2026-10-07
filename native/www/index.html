@@ -119,6 +119,8 @@
         .b.big { width:100%; padding:15px 18px; font-size:16px; }
         .chips { display:flex; gap:8px; flex-wrap:wrap; }
         .chips .b { flex:1 1 auto; }
+        .row .dob-lbl { font-size:12.5px; font-weight:700; color: var(--gray-700); margin:-2px 0 -6px 2px; }
+        .row input[type=date] { min-height:48px; -webkit-appearance:none; appearance:none; color: var(--gray-900); }
         .hdr .short { display:none; } @media (max-width: 480px) { .hdr .full { display:none; } .hdr .short { display:inline; font-size:16px; line-height:1; } }
         .consent { margin:8px 0 0; font-size:12px; line-height:1.45; color: var(--gray-500); }
         .consent a { color: var(--blue); }
@@ -160,8 +162,9 @@
     <div class="composer" id="composer"></div>
     <div class="note">Customer details are sent only to Universal Insurance Brokers. <a href="/privacy">Privacy policy</a></div>
     <input type="file" id="file" accept="image/*" capture="environment" style="display:none;" onchange="MaxLead.fileChosen(this)">
+    <input type="file" id="fileUpload" accept="image/*" style="display:none;" onchange="MaxLead.fileChosen(this)">
 </div>
 
-<script src="/max.js?v=20261007b"></script>
+<script src="/max.js?v=20261007c"></script>
 </body>
 </html>

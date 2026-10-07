@@ -246,6 +246,7 @@
     }
     // Dates: stored as YYYY-MM-DD, shown as MM/DD/YYYY. isoDate() accepts the
     // date picker's value or a typed MM/DD/YYYY (browsers without a picker).
+    const US_STATES = ['AL','AK','AZ','AR','CA','CO','CT','DE','DC','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','PR','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY'];
     function today() { return new Date().toISOString().slice(0, 10); }
     function isoDate(v) { v = String(v || '').trim(); let m = v.match(/^(\d{4})-(\d{2})-(\d{2})$/); if (m) return v; m = v.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/); return m ? m[3] + '-' + m[1].padStart(2, '0') + '-' + m[2].padStart(2, '0') : ''; }
     function fmtDate(iso) { const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? m[2] + '/' + m[3] + '/' + m[1] : (iso || ''); }
@@ -255,16 +256,16 @@
         compose('<div class="chips"><button class="b pri big" id="camBtn" style="flex:1 1 55%;" onclick="MaxLead.pick(\'dl\', \'camera\')">📷 Take a photo of the license</button><button class="b pri big" id="upBtn" style="flex:1 1 40%;background:linear-gradient(to right,#0e7490,#06b6d4);" onclick="MaxLead.pick(\'dl\', \'upload\')">🖼️ Upload a photo</button></div><div class="chips" style="margin-top:8px;"><button class="b sec" onclick="MaxLead.typeDL()">Type it instead</button></div>');
     }
     function typeDL() {
-        compose('<div class="row" style="flex-wrap:wrap;"><input type="text" id="nm" placeholder="' + (isGuest() ? 'Your first and last name' : 'Customer\'s first and last name') + '" autocomplete="off" value="' + esc(lead.name) + '" style="flex:1 1 100%;"><label class="dob-lbl" for="dob" style="flex:1 1 100%;">Date of birth</label><input type="date" id="dob" max="' + today() + '" style="flex:1 1 100%;"><input type="text" id="dln" placeholder="License number (optional)" style="flex:1 1 100%;"><button class="b pri" style="flex:1" onclick="MaxLead.saveTypedDL()">Next</button></div>');
+        compose('<div class="row" style="flex-wrap:wrap;"><input type="text" id="nm" placeholder="' + (isGuest() ? 'Your first and last name' : 'Customer\'s first and last name') + '" autocomplete="off" value="' + esc(lead.name) + '" style="flex:1 1 100%;"><label class="dob-lbl" for="dob" style="flex:1 1 100%;">Date of birth</label><input type="date" id="dob" max="' + today() + '" style="flex:1 1 100%;"><label class="dob-lbl" for="dls" style="flex:1 1 100%;">Driver\'s license state <span style="font-weight:500;color:var(--gray-500);">(optional)</span></label><select id="dls" style="flex:1 1 100%;"><option value="">— Not sure —</option>' + US_STATES.map((s) => '<option value="' + s + '"' + (s === 'FL' ? ' selected' : '') + '>' + s + '</option>').join('') + '</select><input type="text" id="dln" placeholder="DL number (optional)" autocapitalize="characters" autocomplete="off" style="flex:1 1 100%;"><button class="b pri" style="flex:1" onclick="MaxLead.saveTypedDL()">Next</button></div>');
     }
     async function saveTypedDL() {
-        const nm = ($('nm').value || '').trim(); const dob = ($('dob').value || '').trim(); const dln = ($('dln').value || '').trim();
+        const nm = ($('nm').value || '').trim(); const dob = ($('dob').value || '').trim(); const dln = ($('dln').value || '').trim(); const dls = ($('dls') && $('dls').value) || '';
         if (nm.length < 2) { msg('bot err', isGuest() ? 'Please type your first and last name.' : 'Please type the customer\'s first and last name.'); $('nm').focus(); return; }
         const iso = isoDate(dob); if (!iso) { msg('bot err', 'Please pick the date of birth.'); $('dob').focus(); return; }
         if (new Date(iso) > new Date()) { msg('bot err', 'The date of birth cannot be in the future.'); return; }
         lead.name = nm; const parts = nm.split(' ');
-        lead.dl = { firstName: parts[0] || '', lastName: parts.slice(1).join(' '), dob: iso, dlNumber: dln.toUpperCase(), dlState: 'FL' };
-        msg('user', esc(nm) + ', DOB ' + esc(fmtDate(iso)) + (dln ? ', DL ' + esc(dln) : ''));
+        lead.dl = { firstName: parts[0] || '', lastName: parts.slice(1).join(' '), dob: iso, dlNumber: dln.toUpperCase(), dlState: dls };
+        msg('user', esc(nm) + ', DOB ' + esc(fmtDate(iso)) + (dln ? ', DL ' + esc(dln.toUpperCase()) + (dls ? ' (' + esc(dls) + ')' : '') : (dls ? ', DL state ' + esc(dls) : '')));
         await afterDL();
     }
     async function afterDL() {
@@ -273,7 +274,7 @@
         composeVIN();
     }
     function composeVIN() {
-        compose('<div class="chips"><button class="b pur big" id="camBtn" style="flex:1 1 55%;" onclick="MaxLead.pick(\'vin\', \'camera\')">📷 Take a photo of the VIN</button><button class="b pur big" id="upBtn" style="flex:1 1 40%;background:linear-gradient(to right,#0e7490,#06b6d4);" onclick="MaxLead.pick(\'vin\', \'upload\')">🖼️ Upload a photo</button></div><div class="chips" style="margin-top:8px;"><button class="b sec" onclick="MaxLead.typeVIN()">Type the VIN</button><button class="b sec" onclick="MaxLead.skipVIN()">Skip for now</button></div>');
+        compose('<div class="chips"><button class="b pur big" id="camBtn" style="flex:1 1 55%;" onclick="MaxLead.pick(\'vin\', \'camera\')">📷 Take a photo of the VIN</button><button class="b pur big" id="upBtn" style="flex:1 1 40%;background:linear-gradient(to right,#0e7490,#06b6d4);" onclick="MaxLead.pick(\'vin\', \'upload\')">🖼️ Upload a picture of the VIN</button></div><div class="chips" style="margin-top:8px;"><button class="b sec" onclick="MaxLead.typeVIN()">Type the VIN</button><button class="b sec" onclick="MaxLead.skipVIN()">Skip for now</button></div>');
     }
     function typeVIN() {
         compose('<div class="row"><input type="text" id="in" placeholder="17-character VIN" maxlength="17" autocapitalize="characters" autocomplete="off" spellcheck="false" value="' + esc(lead.vin || '') + '" style="text-transform:uppercase;letter-spacing:1px;font-family:ui-monospace,Menlo,Consolas,monospace;" oninput="MaxLead.vinHint(this)" onkeydown="MaxLead.enter(event, MaxLead.saveTypedVIN)"><button class="b pri" onclick="MaxLead.saveTypedVIN()">Decode</button></div><p class="consent" id="vinHint">17 letters and numbers, no I, O or Q.</p>');

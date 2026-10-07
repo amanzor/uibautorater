@@ -87,14 +87,19 @@
     function sessionFrom(j) { return j && j.access_token ? { access_token: j.access_token, refresh_token: j.refresh_token, expires_at: j.expires_at || (Math.floor(Date.now() / 1000) + (j.expires_in || 3600)), user: j.user } : null; }
     async function signUp(d, password) {
         const r = await authPost('/signup?redirect_to=' + encodeURIComponent(SITE_URL), { email: d.email, password, data: { full_name: d.name, dealership: d.dealership, address: d.address, phone: d.phone, agreed_terms_at: d.agreed_terms_at || '' } });
-        if (!r.ok) throw new Error(/already|exists/i.test(authError(r.j, '')) ? 'That email already has an account. Log in instead, or reset your password.' : authError(r.j, 'Sign-up failed (HTTP ' + r.status + ').'));
+        if (!r.ok) {
+            const m = authError(r.j, '');
+            if (/already|exists/i.test(m)) throw new Error('That email already has an account. Log in instead, or reset your password.');
+            if (/rate limit/i.test(m)) throw new Error('We could not send the confirmation email right now (the email service has a limit on how many it sends per hour). If you already submitted this form once, your account may exist: tap "I already have an account" and log in. Otherwise please try again in about an hour.');
+            throw new Error(m || 'Sign-up failed (HTTP ' + r.status + ').');
+        }
         const s = sessionFrom(r.j); if (s) { saveAuth(s); return 'active'; }
         if (r.j && Array.isArray(r.j.identities) && r.j.identities.length === 0) throw new Error('That email already has an account. Log in instead, or reset your password.');
         return 'confirm';                          // confirmation email sent
     }
     async function logIn(email, password) {
         const r = await authPost('/token?grant_type=password', { email, password });
-        if (!r.ok) throw new Error(/invalid/i.test(authError(r.j, '')) ? 'Wrong email or password.' : /confirm/i.test(authError(r.j, '')) ? 'Please confirm your email first (check your inbox for our link), then log in.' : authError(r.j, 'Login failed (HTTP ' + r.status + ').'));
+        if (!r.ok) throw new Error(/invalid/i.test(authError(r.j, '')) ? 'Wrong email or password.' : /confirm/i.test(authError(r.j, '')) ? 'Please confirm your email first (check your inbox for our link), then log in. If no email arrived, ask the office to confirm your account.' : authError(r.j, 'Login failed (HTTP ' + r.status + ').'));
         saveAuth(sessionFrom(r.j));
     }
     async function refreshSession() {

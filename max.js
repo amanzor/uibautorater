@@ -273,7 +273,7 @@
         composeVIN();
     }
     function composeVIN() {
-        compose('<div class="chips"><button class="b pur big" id="camBtn" style="flex:1 1 55%;" onclick="MaxLead.pick(\'vin\', \'camera\')">📷 Take a photo of the VIN</button><button class="b pur big" id="upBtn" style="flex:1 1 40%;background:linear-gradient(to right,#0e7490,#06b6d4);" onclick="MaxLead.pick(\'vin\', \'upload\')">🖼️ Upload a photo</button></div><div class="chips" style="margin-top:8px;"><button class="b sec" onclick="MaxLead.typeVIN()">Type the VIN</button><button class="b sec" onclick="MaxLead.skipVIN()">Skip for now</button></div>');
+        compose('<div class="chips"><button class="b pur big" id="camBtn" style="flex:1 1 55%;" onclick="MaxLead.pick(\'vin\', \'camera\')">📷 Take a photo of the VIN</button><button class="b pur big" id="upBtn" style="flex:1 1 40%;background:linear-gradient(to right,#0e7490,#06b6d4);" onclick="MaxLead.pick(\'vin\', \'upload\')">🖼️ Upload a picture of the VIN</button></div><div class="chips" style="margin-top:8px;"><button class="b sec" onclick="MaxLead.typeVIN()">Type the VIN</button><button class="b sec" onclick="MaxLead.skipVIN()">Skip for now</button></div>');
     }
     function typeVIN() {
         compose('<div class="row"><input type="text" id="in" placeholder="17-character VIN" maxlength="17" autocapitalize="characters" autocomplete="off" spellcheck="false" value="' + esc(lead.vin || '') + '" style="text-transform:uppercase;letter-spacing:1px;font-family:ui-monospace,Menlo,Consolas,monospace;" oninput="MaxLead.vinHint(this)" onkeydown="MaxLead.enter(event, MaxLead.saveTypedVIN)"><button class="b pri" onclick="MaxLead.saveTypedVIN()">Decode</button></div><p class="consent" id="vinHint">17 letters and numbers, no I, O or Q.</p>');

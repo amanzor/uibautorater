@@ -32,6 +32,33 @@ store apps.
 
 The privacy policy for the store listings is served at `/privacy`.
 
+## Marketing partner accounts (login)
+
+Dealer salespeople create an account in the app (full name, dealership,
+address, phone, email, password) and must read and tick the **referral
+partner disclaimer** (they act as marketing agents, client information is
+kept secure and confidential, Gift Card Rewards never affect the client's
+premium). They then log in with that email and password; every lead they
+send is tagged "Referred by" with their name and dealership, both in the
+email and in the `referrer` field of the lead record. Each sign-up still
+emails the office as before, with the acknowledgement timestamp.
+
+Accounts live in Supabase Auth (Authentication ▸ Users in the Supabase
+dashboard, where you can also add, confirm or delete a salesperson). Two
+settings to check once:
+
+1. **Authentication ▸ URL Configuration**: set *Site URL* to the MAX
+   address (`https://uibautorater.vercel.app`) and add it to *Redirect
+   URLs*, so confirmation and password-reset links open the app.
+2. **Authentication ▸ Providers ▸ Email**: *Confirm email* is on by
+   default, so a new salesperson must tap the link in the confirmation
+   email before the first login. Turn it off if you prefer instant access
+   after sign-up (the app handles both).
+
+Password resets use the **Forgot password?** link on the login screen; the
+emailed link brings the salesperson back to the app to choose a new
+password.
+
 ## Publish to the stores
 
 See `STORE-RELEASE.md`.
@@ -40,7 +67,7 @@ See `STORE-RELEASE.md`.
 
 | File | Purpose |
 |---|---|
-| `index.html`, `max.js` | the app (guided chat flow + dealer sign-up) |
+| `index.html`, `max.js` | the app (marketing partner login/sign-up, guided chat flow) |
 | `manifest.webmanifest`, `sw.js`, `icons/`, `icon.png` | installable app shell |
 | `privacy.html` | privacy policy |
 | `supabase/functions/claude`, `supabase/functions/inquiry` | photo reading and lead email functions |

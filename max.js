@@ -433,7 +433,7 @@
         formShell('signupForm', '🤝 Create your marketing partner account', 'Partner with Universal Insurance Brokers. You will log in with this email and password.',
             '<div><label>Full name</label><input type="text" id="d_name" autocomplete="name" placeholder="First and last name"></div>' +
             '<div><label>Dealership</label><input type="text" id="d_dealer" autocomplete="organization" placeholder="Dealership name"></div>' +
-            '<div><label>Address</label><input type="text" id="d_address" autocomplete="street-address" placeholder="Street, city, state, zip"></div>' +
+            '<div><label>Address <span style="font-weight:500;color:var(--gray-500);">(optional)</span></label><input type="text" id="d_address" autocomplete="street-address" placeholder="Street, city, state, zip"></div>' +
             '<div><label>Phone number</label><input type="tel" id="d_phone" inputmode="tel" autocomplete="tel" placeholder="(305) 555-1234" maxlength="14" oninput="this.value=MaxLead.fmtPhone(this.value)"></div>' +
             '<div><label>Email (this is your username)</label><input type="email" id="d_email" inputmode="email" autocomplete="username" placeholder="name@dealership.com"></div>' +
             '<div><label>Password</label><input type="password" id="d_pw" autocomplete="new-password" placeholder="At least 8 characters"></div>' +
@@ -448,7 +448,7 @@
         const v = (id) => ($(id).value || '').trim();
         const d = { name: v('d_name'), dealership: v('d_dealer'), address: v('d_address'), phone: fmtPhone(v('d_phone')), email: v('d_email').toLowerCase() };
         const pw = $('d_pw').value || '', pw2 = $('d_pw2').value || '';
-        const problem = d.name.length < 2 ? 'Please enter your full name.' : d.address.length < 5 ? 'Please enter your address.' : d.phone.replace(/\D/g, '').length !== 10 ? 'Please enter a 10-digit phone number.' : !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email) ? 'Please enter a valid email.' : pw.length < 8 ? 'Please choose a password of at least 8 characters.' : pw !== pw2 ? 'The two passwords do not match.' : !$('d_ack').checked ? 'Please read the disclaimer and tick the acknowledgement box to continue.' : '';
+        const problem = d.name.length < 2 ? 'Please enter your full name.' : d.phone.replace(/\D/g, '').length !== 10 ? 'Please enter a 10-digit phone number.' : !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email) ? 'Please enter a valid email.' : pw.length < 8 ? 'Please choose a password of at least 8 characters.' : pw !== pw2 ? 'The two passwords do not match.' : !$('d_ack').checked ? 'Please read the disclaimer and tick the acknowledgement box to continue.' : '';
         d.agreed_terms_at = new Date().toISOString();
         if (problem) { showErr(problem); haptic('error'); return; }
         $('f_err').style.display = 'none';
@@ -458,7 +458,7 @@
         catch (e) { btn.disabled = false; btn.innerHTML = 'Create account'; showErr(esc(e.message)); haptic('error'); return; }
         // Tell the office (best effort; the account exists either way).
         const subject = 'New Dealer Sign-up – ' + d.name + (d.dealership ? ' (' + d.dealership + ')' : '');
-        const text = ['NEW AUTO DEALER SIGN-UP — MAX app', 'Received: ' + new Date().toLocaleString('en-US'), '', 'Name: ' + d.name, 'Dealership: ' + (d.dealership || '—'), 'Address: ' + d.address, 'Phone: ' + d.phone, 'Email (login): ' + d.email, '', 'Referral partner disclaimer acknowledged: ' + d.agreed_terms_at].join('\n');
+        const text = ['NEW AUTO DEALER SIGN-UP — MAX app', 'Received: ' + new Date().toLocaleString('en-US'), '', 'Name: ' + d.name, 'Dealership: ' + (d.dealership || '—'), 'Address: ' + (d.address || '—'), 'Phone: ' + d.phone, 'Email (login): ' + d.email, '', 'Referral partner disclaimer acknowledged: ' + d.agreed_terms_at].join('\n');
         try { await fetch(INQUIRY_FN, { method: 'POST', headers: HEADERS, body: JSON.stringify({ subject, text, html: '<pre style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;white-space:pre-wrap;">' + esc(text) + '</pre>', replyTo: d.email, source: 'dealer-signup', lead: Object.assign({ type: 'dealer' }, d) }) }); } catch (e) { /* ignore */ }
         haptic('success');
         if (outcome === 'active') { lead = blank(); return start(); }

@@ -32,7 +32,7 @@ store apps.
 
 The privacy policy for the store listings is served at `/privacy`.
 
-## Dealer accounts (login)
+## Marketing partner accounts (login)
 
 Dealer salespeople create an account in the app (full name, dealership,
 address, phone, email, password) and must read and tick the **referral
@@ -67,7 +67,7 @@ See `STORE-RELEASE.md`.
 
 | File | Purpose |
 |---|---|
-| `index.html`, `max.js` | the app (dealer login/sign-up, guided chat flow) |
+| `index.html`, `max.js` | the app (marketing partner login/sign-up, guided chat flow) |
 | `manifest.webmanifest`, `sw.js`, `icons/`, `icon.png` | installable app shell |
 | `privacy.html` | privacy policy |
 | `supabase/functions/claude`, `supabase/functions/inquiry` | photo reading and lead email functions |

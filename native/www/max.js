@@ -23,7 +23,7 @@
     const INQUIRY_TO = 'quotes@universalinsurancebroker.com';
     const AUTH_URL   = SUPABASE_URL + '/auth/v1';
     const SITE_URL   = 'https://uibautorater.vercel.app';   // where confirmation / reset links land
-    // Shown on the dealer sign-up form; the checkbox below it is required.
+    // Shown on the marketing partner sign-up form; the checkbox below it is required.
     const PARTNER_TERMS = [
         'By creating an account you are signing up as a <b>marketing agent (referral partner)</b> of Universal Insurance Brokers. You are not an employee or a licensed agent of the agency, and you do not quote, bind or sell insurance.',
         'The information you provide about your clients is handled as <b>100% secure and confidential</b>. It is transmitted encrypted, used only to prepare the insurance quote, and shared only with Universal Insurance Brokers and the insurance carriers that rate the policy. It is never sold.',
@@ -71,7 +71,7 @@
     function compose(html) { $('composer').innerHTML = html; const inp = $('composer').querySelector('input[type=text],input[type=tel],input[type=email]'); if (inp) setTimeout(() => inp.focus(), 50); scrollDown(); }
     function onEnter(e, fn) { if (e.key === 'Enter') { e.preventDefault(); fn(); } }
 
-    // ── dealer accounts (Supabase Auth, email + password) ────────
+    // ── marketing partner accounts (Supabase Auth, email + password) ──
     // Salespeople sign up once (name, dealership, address, phone, email,
     // password) and then log in with that email and password. The session
     // is kept on the device so the app opens straight into the chat.
@@ -130,13 +130,13 @@
     function setHeader() {
         const u = me(); const btn = $('hdrAccount'); const sub = document.querySelector('.hdr .s'); const rs = document.querySelector('.hdr .restart');
         if (auth && auth.access_token) { btn.style.display = ''; btn.innerHTML = 'Log out'; btn.title = u.email; if (sub) sub.textContent = (u.name || u.email) + (u.dealership ? ' · ' + u.dealership : ''); if (rs) rs.style.display = ''; }
-        else { btn.style.display = 'none'; if (sub) sub.textContent = 'Universal Insurance Brokers · Dealer partners'; if (rs) rs.style.display = 'none'; }
+        else { btn.style.display = 'none'; if (sub) sub.textContent = 'Universal Insurance Brokers · Marketing partners'; if (rs) rs.style.display = 'none'; }
     }
     function formShell(id, title, intro, body) { $('steps').innerHTML = ''; compose(''); $('log').innerHTML = '<div class="form" id="' + id + '"><h2>' + title + '</h2><p>' + intro + '</p>' + body + '<div class="err" id="f_err" style="display:none;"></div></div>'; window.scrollTo({ top: 0 }); }
     function showErr(text) { const e = $('f_err'); if (!e) return; e.innerHTML = text; e.style.display = ''; }
     function loginScreen(notice) {
         setHeader(); step = 0;
-        formShell('loginForm', '🔐 Dealer partner log in', 'Sign in with the email and password you chose when you signed up.',
+        formShell('loginForm', '🔐 Marketing partner log in', 'Sign in with the email and password you chose when you signed up.',
             '<div><label>Email</label><input type="email" id="l_email" inputmode="email" autocomplete="username" placeholder="name@dealership.com" onkeydown="MaxLead.enter(event, MaxLead.login)"></div>' +
             '<div><label>Password</label><input type="password" id="l_pw" autocomplete="current-password" placeholder="Your password" onkeydown="MaxLead.enter(event, MaxLead.login)"></div>' +
             (notice ? '<div class="ok-note">' + notice + '</div>' : '') +
@@ -430,7 +430,7 @@
     // referral partner. Sent to the office like a lead (source 'dealer-signup').
     function dealerSignup() {
         setHeader();
-        formShell('signupForm', '🤝 Create your dealer account', 'Partner with Universal Insurance Brokers. You will log in with this email and password.',
+        formShell('signupForm', '🤝 Create your marketing partner account', 'Partner with Universal Insurance Brokers. You will log in with this email and password.',
             '<div><label>Full name</label><input type="text" id="d_name" autocomplete="name" placeholder="First and last name"></div>' +
             '<div><label>Dealership</label><input type="text" id="d_dealer" autocomplete="organization" placeholder="Dealership name"></div>' +
             '<div><label>Address</label><input type="text" id="d_address" autocomplete="street-address" placeholder="Street, city, state, zip"></div>' +

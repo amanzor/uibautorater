@@ -45,16 +45,6 @@
           "sizes": "192x192"
         }
       ]
-    },
-    {
-      "name": "Binder Book",
-      "url": "https://uib-binderbook.vercel.app/",
-      "icons": [
-        {
-          "src": "icons/rater-192.png",
-          "sizes": "192x192"
-        }
-      ]
     }
   ]
 }

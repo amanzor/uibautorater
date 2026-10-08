@@ -555,16 +555,14 @@
     </div>
     <div class="header-right">
         <span id="userDisplay"></span>
-        <button type="button" class="btn-secondary btn-sm" id="installBtn" style="display:none;" onclick="Rater.install()"><i data-lucide="download"></i> Install</button>
-        <a class="btn-navy btn-sm" href="https://uib-binderbook.vercel.app/" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:6px;font-size:12px;font-weight:600;"><i data-lucide="book-open"></i> Binder Book</a>
-    </div>
+        <button type="button" class="btn-secondary btn-sm" id="installBtn" style="display:none;" onclick="Rater.install()"><i data-lucide="download"></i> Install</button>    </div>
 </div>
 
 <!-- Sign-in gate (shown only when no agent is signed in on this device) -->
 <div id="loginGate" class="login-wrap" style="display:none;">
     <div class="login-card">
         <h2><i data-lucide="lock"></i> Agent Sign In</h2>
-        <p>Use the same agent name and password as the Binder Book.</p>
+        <p>Sign in with your agent name and password.</p>
         <div class="form-group">
             <label>Agent</label>
             <select id="loginAgent"></select>
@@ -574,9 +572,7 @@
             <input type="password" id="loginPassword" autocomplete="current-password">
         </div>
         <div id="loginMsg" class="note" style="margin-bottom:10px;"></div>
-        <button class="btn-primary btn-block" onclick="Rater.login()"><i data-lucide="log-in"></i> Sign In</button>
-        <button class="btn-secondary btn-block" style="margin-top:8px;" onclick="window.open('https://uib-binderbook.vercel.app/','_blank')">Open Binder Book</button>
-    </div>
+        <button class="btn-primary btn-block" onclick="Rater.login()"><i data-lucide="log-in"></i> Sign In</button>    </div>
 </div>
 
 <div id="app" style="display:none;">
@@ -798,7 +794,7 @@
 </div>
 
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-<script src="rater.js?v=20261006c"></script>
+<script src="rater.js?v=20261008a"></script>
 <script src="supabase.js?v=20260916a"></script>
 <script src="https://cdn.jsdelivr.net/npm/motion@12/dist/motion.js"></script>
 <script src="uib-motion.js?v=20261002a"></script>

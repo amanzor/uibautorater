@@ -1247,7 +1247,7 @@
         const sel = $('loginAgent');
         sel.innerHTML = names.length ? names.map((n) => '<option>' + esc(n) + '</option>').join('') : '<option value="">(loading agents…)</option>';
         try { const r = localStorage.getItem('rememberedAgentEmail'); if (r && names.includes(r)) sel.value = r; } catch (e) {}
-        $('loginMsg').innerHTML = names.length ? '' : 'Agent list not on this device yet. It downloads automatically from the cloud the first time — if this stays empty, sign in on the Binder Book once, then come back.';
+        $('loginMsg').innerHTML = names.length ? '' : 'Agent list not on this device yet. It downloads automatically from the cloud the first time — if this stays empty, check your connection and reload.';
         if (!names.length) { let tries = 0; const t = setInterval(() => { tries++; const n = agentNames(); if (n.length) { clearInterval(t); showLogin(); } else if (tries > 20) clearInterval(t); }, 1500); }
         refreshIcons();
     }

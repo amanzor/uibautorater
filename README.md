@@ -1,6 +1,6 @@
 # UIB Auto Rater — setup guide
 
-> One of three separate UIB apps, each with its own code: **UIB Auto Rater** (this repository, https://uibautorater.vercel.app), **MAX** (amanzor/MAXAi, https://maxai.vercel.app) and the **UIB Binder Book** (amanzor/uib-binderbook, https://uib-binderbook.vercel.app). They share the same Supabase project.
+> One of three separate UIB apps, each with its own code: **UIB Auto Rater** (this repository, https://uibautorater.vercel.app), **MAX** (amanzor/MAXAi, https://uib-max.vercel.app) and the **UIB Binder Book** (amanzor/uib-binderbook, https://uib-binderbook.vercel.app). They share the same Supabase project.
 
 The Auto Rater is its own site at https://uibautorater.vercel.app that works as a
 website **and** as an installable app on iPhone and Android. It uses the same

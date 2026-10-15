@@ -1,8 +1,8 @@
-# UIB Auto Rater (agent quoting tool)
+# UIB Auto Rater — setup guide
 
-> One of three separate UIB apps, each with its own code: **UIB Auto Rater** (this repository), **MAX** (amanzor/MAXAi, the lead app) and the **UIB Binder Book** (amanzor/uib-binderbook). They share the same Supabase project.
+> One of three separate UIB apps, each with its own code: **UIB Auto Rater** (this repository, https://uibautorater.vercel.app), **MAX** (amanzor/MAXAi, https://maxai.vercel.app) and the **UIB Binder Book** (amanzor/uib-binderbook, https://uib-binderbook.vercel.app). They share the same Supabase project.
 
-The Auto Rater is served at the root of https://uibautorater.vercel.app. It works as a
+The Auto Rater is its own site at https://uibautorater.vercel.app that works as a
 website **and** as an installable app on iPhone and Android. It uses the same
 colors, fonts, buttons and layout as the Binder Book, the same sign-in, and the
 same Supabase cloud sync, so quotes and the carrier list follow you across
@@ -26,16 +26,16 @@ What it does:
 
 ## 1. Deploy the website (5 minutes)
 
-Connect this repository to Vercel (Add New Project → import `uibautorater`,
-framework "Other", no build command). Every push to `main` then deploys. Open:
+The site deploys from this repository through Vercel; every merge to `main`
+goes live. Open:
 
 ```
 https://uibautorater.vercel.app
 ```
 
-Sign in with your Binder Book agent name and password (the agent list syncs
-from the same Supabase project the Binder Book uses). The header's **Binder
-Book** button links to https://uib-binderbook.vercel.app/.
+Sign in with your Binder Book agent name and password. The Binder Book's agent
+and admin dashboards link here with a cyan **Auto Rater** button, and the
+rater's header links back to the Binder Book.
 
 Nothing else is required for the website, Demo mode, Portal rating and Manual
 rating. Only API rating needs the backend function in step 3.
@@ -216,15 +216,27 @@ app with the inquiry text prefilled (photos cannot be attached that way).
 3. Press **Rate Quote**. The Results tab fills in with a ranked comparison.
 4. Untick Demo mode when your real carriers are configured.
 
-## Files added
+## MAX by UIB — the consumer lead app
+
+The public, no-login lead app (prospects photograph their license and VIN,
+leave phone and email, and the lead is emailed to
+quotes@universalinsurancebroker.com; auto dealers can sign up as referral
+partners) lives in its own repository, **amanzor/MAXAi**, together
+with the App Store / Google Play shells and its `STORE-RELEASE.md`
+publishing guide. It shares this project's Supabase functions (`claude`
+and `inquiry`) and the optional `max_leads` table from
+`supabase-max-leads.sql` in that repository.
+
+## Files
 
 | File | Purpose |
 |---|---|
 | `index.html` | the Auto Rater page (same look as the Binder Book) |
 | `rater.js` | form schema, carriers, rating engine, saved quotes, sign-in, install |
 | `manifest.webmanifest`, `sw.js`, `icons/` | makes the page installable as a phone app |
-| `supabase/functions/rate/index.ts` | secure carrier-rating function (deployed to Supabase, not to the website) |
-| `uib-theme.css`, `uib-motion.js`, `lz-string.min.js`, `storage-codec.js`, `supabase.js`, `icon.png` | shared Binder Book look, storage and cloud-sync layer |
+| `uib-auth.js`, `uib-mfa.js`, `uib-audit.js` | the Binder Book's sign-in, 2-step verification and audit log, shared so agents use one login |
+| `supabase.js`, `storage-codec.js` | cloud sync with the Binder Book's Supabase project; compresses saved quotes |
+| `supabase/functions/rate`, `claude`, `inquiry` | carrier rating, MAX tab photo reading, inquiry emails (deployed to Supabase, not to the website) |
 
 Data lives in the same places as the rest of the Binder Book: `raterCarriers`
 and `raterQuotes` in the browser's storage, synced automatically to the

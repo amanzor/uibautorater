@@ -12,5 +12,27 @@
         }
       ]
     }
+  ],
+  "redirects": [
+    {
+      "source": "/rater",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/rater.html",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/privacy",
+      "destination": "https://uib-max.vercel.app/privacy",
+      "permanent": false
+    },
+    {
+      "source": "/max.js",
+      "destination": "https://uib-max.vercel.app/max.js",
+      "permanent": false
+    }
   ]
 }

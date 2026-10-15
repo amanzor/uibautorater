@@ -488,11 +488,26 @@
         const mv = path.match(/^vehicles\.(\d+)\.(year|make|model)$/);
         if (mv) { const i = +mv[1]; const h = document.querySelector('#vehicle_' + i + ' > h4 .note'); if (h) h.textContent = vehicleName(quote.vehicles[i]); }
         if (path === 'client.firstName' || path === 'client.lastName') updateMeta();
+        if (path === 'client.firstName' || path === 'client.middleName' || path === 'client.lastName') syncClientToDriver1();
         if (path === 'client.address') { quote.client.addressVerified = false; parseAddress(val); setAddrStatus(); copyGarageFromClient(); }
         if (path === 'client.timeAtResidenceYears') applyShowIf();
         if (path === 'prior.priorInsurance') applyShowIf();
         if (/^client\.phones\./.test(path)) derivePhones();
         scheduleDraft();
+    }
+
+    // Driver #1 is the client: their first name, middle initial and last name
+    // always mirror the Client Contact Information section.
+    function syncClientToDriver1() {
+        if (!quote || !quote.drivers || !quote.drivers[0]) return;
+        const d = quote.drivers[0]; const c = quote.client;
+        d.firstName = c.firstName || ''; d.middleName = c.middleName || ''; d.lastName = c.lastName || '';
+        ['firstName', 'middleName', 'lastName'].forEach((k) => {
+            const el = document.querySelector('[data-path="drivers.0.' + k + '"]');
+            if (el && el.value !== d[k]) { el.value = d[k]; if (el.dataset.req != null) el.classList.toggle('need', d[k] === ''); }
+        });
+        document.querySelectorAll('#driver_0 > h4 .note').forEach((h) => { h.textContent = driverName(d); });
+        refreshOperatorSelects();
     }
 
     function refreshOperatorSelects() {
@@ -762,6 +777,7 @@
                 '<div class="row"><span class="pill ' + method + '">' + (method === 'api' ? 'API' : method === 'portal' ? 'Portal' : 'Manual') + '</span>' +
                 '<span class="pill ' + (c.enabled ? 'on' : 'off') + '">' + (c.enabled ? 'Enabled' : 'Disabled') + '</span>' +
                 (method === 'api' && c.secretPrefix ? '<span class="pill">RATER_' + esc(c.secretPrefix) + '_*</span>' : '') + '</div>' +
+                (c.producerCode || c.username ? '<div class="meta">' + (c.producerCode ? 'Code <b>' + esc(c.producerCode) + '</b>' + (c.subCode ? ' / ' + esc(c.subCode) : '') : '') + (c.username ? (c.producerCode ? ' · ' : '') + 'User <b>' + esc(c.username) + '</b>' : '') + (c.password ? ' · Password ••••' : ' · <span style="color:#b45309;">No password yet</span>') + '</div>' : '<div class="meta" style="color:#b45309;">No carrier account on file — press Edit to add code, username and password</div>') +
                 (method === 'api' && c.endpoint ? '<div class="meta">' + esc(c.endpoint) + '</div>' : '') +
                 (method === 'portal' && c.portalUrl ? '<div class="meta">' + esc(c.portalUrl) + '</div>' : '') +
                 (c.notes ? '<div class="note">' + esc(c.notes) + '</div>' : '') +
@@ -785,6 +801,45 @@
         showSuccess('Starter carriers added as manual entry. Edit each one to switch it to API or Portal rating.');
     }
 
+    function togglePassword() {
+        const el = $('c_password'); if (!el) return;
+        el.type = el.type === 'password' ? 'text' : 'password';
+    }
+
+    // The carriers active in the agency's TurboRater Company Setup (Personal
+    // Auto, Florida). Added as Portal carriers so agents can quote today; the
+    // producer code, username and password are typed on each card by the
+    // agency (they are never stored in this file).
+    const TURBORATER_CARRIERS = [
+        { name: 'Amwins Choice',               code: 'AMWC', portalUrl: 'https://www.amwins.com/',          color: '#0891b2' },
+        { name: 'Bristol West',                code: 'BRIS', portalUrl: 'https://www.bristolwest.com/',     color: '#15803d' },
+        { name: 'Embark General Incline',      code: 'EMBK', portalUrl: 'https://www.embarkgeneral.com/',  color: '#4338ca' },
+        { name: 'GAINSCO',                     code: 'GAIN', portalUrl: 'https://www.gainsco.com/',        color: '#b45309' },
+        { name: 'GEICO',                       code: 'GEIC', portalUrl: 'https://www.geico.com/',          color: '#059669' },
+        { name: 'Kemper Auto | BVP',           code: 'KBVP', portalUrl: 'https://www.kemper.com/',         color: '#7c3aed' },
+        { name: 'Kemper Auto | Infinity',      code: 'KINF', portalUrl: 'https://www.infinityauto.com/',   color: '#6d28d9' },
+        { name: 'National General Value',      code: 'NATG', portalUrl: 'https://www.nationalgeneral.com/', color: '#dc2626' },
+        { name: 'Pearl Holding Group',         code: 'PRLH', portalUrl: 'https://www.pearlholding.com/',   color: '#be123c' },
+        { name: 'Pearl Holding Group Premier', code: 'PRLP', portalUrl: 'https://www.pearlholding.com/',   color: '#9f1239' },
+        { name: 'Progressive',                 code: 'PROG', portalUrl: 'https://www.foragentsonly.com/',  color: '#1d4ed8' },
+        { name: 'United Auto',                 code: 'UAIC', portalUrl: 'https://www.uaig.net/',           color: '#d97706' },
+        { name: 'United Auto Premier',         code: 'UAIP', portalUrl: 'https://www.uaig.net/',           color: '#c2410c' }
+    ];
+    function addTurboRaterCarriers() {
+        let added = 0;
+        TURBORATER_CARRIERS.forEach((t) => {
+            if (carriers.some((c) => c.name.toLowerCase() === t.name.toLowerCase() || c.code === t.code)) return;
+            carriers.push({ id: uid(), name: t.name, code: t.code, method: 'portal', enabled: true, color: t.color, order: (carriers.length + 1) * 10,
+                producerCode: '', subCode: '', username: '', password: '', portalUrl: t.portalUrl,
+                endpoint: '', httpMethod: 'POST', contentType: 'json', authType: 'none', apiKeyHeader: '', secretPrefix: t.code, requestTemplate: '',
+                responseMap: { premium: '', downPayment: '', monthly: '', term: '', quoteId: '', link: '', error: '' },
+                notes: 'From TurboRater Company Setup. Add the producer code, username and password, confirm the agent portal URL, and switch to API once the carrier approves a connection.' });
+            added++;
+        });
+        saveCarriers();
+        showSuccess(added ? added + ' TurboRater carrier' + (added === 1 ? '' : 's') + ' added as Portal carriers. Press Edit on each card to add its producer code, username and password.' : 'All TurboRater carriers are already in the list.');
+    }
+
     function editCarrier(id) {
         const c = id ? carriers.find((x) => x.id === id) : null;
         $('carrierModalTitle').innerHTML = '<i data-lucide="building-2"></i> ' + (c ? 'Edit Carrier' : 'Add Carrier');
@@ -795,6 +850,11 @@
         $('c_enabled').value = c ? (c.enabled ? '1' : '0') : '1';
         $('c_color').value = c && c.color ? c.color : '#1d4ed8';
         $('c_order').value = c && c.order != null ? c.order : (carriers.length + 1) * 10;
+        $('c_producerCode').value = c ? (c.producerCode || '') : '';
+        $('c_subCode').value = c ? (c.subCode || '') : '';
+        $('c_username').value = c ? (c.username || '') : '';
+        $('c_password').value = c ? (c.password || '') : '';
+        $('c_password').type = 'password';
         $('c_portalUrl').value = c ? (c.portalUrl || '') : '';
         $('c_endpoint').value = c ? (c.endpoint || '') : '';
         $('c_httpMethod').value = c ? (c.httpMethod || 'POST') : 'POST';
@@ -830,6 +890,10 @@
             enabled: $('c_enabled').value === '1',
             color: $('c_color').value,
             order: +$('c_order').value || 0,
+            producerCode: $('c_producerCode').value.trim(),
+            subCode: $('c_subCode').value.trim(),
+            username: $('c_username').value.trim(),
+            password: $('c_password').value,
             portalUrl: $('c_portalUrl').value.trim(),
             endpoint: $('c_endpoint').value.trim(),
             httpMethod: $('c_httpMethod').value,
@@ -894,7 +958,7 @@
         showSuccess('<span class="spinner dark"></span> Testing ' + esc(c.name) + '…');
         try {
             const r = await callRateFn(c, quote || blankQuote(), { test: true });
-            if (r.ok) showSuccess('✅ ' + esc(c.name) + ': the rating function is reachable and the secrets ' + (r.secretsFound ? 'were found (' + esc(r.secretsFound.join(', ')) + ').' : 'check passed.'));
+            if (r.ok) showSuccess('✅ ' + esc(c.name) + ': the rating function is reachable. ' + (r.secretsFound && r.secretsFound.length ? 'Supabase secrets found: ' + esc(r.secretsFound.join(', ')) + '.' : (r.cardFound && r.cardFound.length ? 'Using the account on the carrier card (' + esc(r.cardFound.join(', ')) + ').' : 'No credentials found yet — add them on the carrier card.')));
             else showError('❌ ' + esc(c.name) + ': ' + esc(r.error || 'Unknown error'));
         } catch (e) { showError('❌ ' + esc(c.name) + ': ' + esc(e.message)); }
     }
@@ -1239,30 +1303,27 @@
     // ────────────────────────────────────────────────────────────
     //  Sign-in (same credentials as the Binder Book)
     // ────────────────────────────────────────────────────────────
-    function credentials() { return load('agentCredentials', null); }
-    function agentNames() { const c = credentials(); return c && typeof c === 'object' ? Object.keys(c).sort() : []; }
     function showLogin() {
         $('loginGate').style.display = ''; $('app').style.display = 'none';
-        const names = agentNames();
-        const sel = $('loginAgent');
-        sel.innerHTML = names.length ? names.map((n) => '<option>' + esc(n) + '</option>').join('') : '<option value="">(loading agents…)</option>';
-        try { const r = localStorage.getItem('rememberedAgentEmail'); if (r && names.includes(r)) sel.value = r; } catch (e) {}
-        $('loginMsg').innerHTML = names.length ? '' : 'Agent list not on this device yet. It downloads automatically from the cloud the first time — if this stays empty, sign in on the Binder Book once, then come back.';
-        if (!names.length) { let tries = 0; const t = setInterval(() => { tries++; const n = agentNames(); if (n.length) { clearInterval(t); showLogin(); } else if (tries > 20) clearInterval(t); }, 1500); }
+        try { const r = localStorage.getItem('rememberedAgentEmail'); if (r) $('loginEmail').value = r; } catch (e) {}
+        $('loginMsg').innerHTML = '';
         refreshIcons();
     }
     function login() {
-        const agent = $('loginAgent').value; const pass = $('loginPassword').value;
-        const creds = credentials();
-        if (!agent || !creds) { $('loginMsg').innerHTML = '<span style="color:var(--red)">Agent list not loaded yet.</span>'; return; }
-        const stored = typeof creds[agent] === 'object' ? (creds[agent] && creds[agent].password) : creds[agent];
-        if (stored !== pass) { $('loginMsg').innerHTML = '<span style="color:var(--red)">Incorrect password.</span>'; $('loginPassword').value = ''; return; }
-        try { localStorage.setItem('uibCurrentUser', agent); sessionStorage.setItem('uibCurrentUser', agent); } catch (e) {}
-        currentUser = agent;
-        boot();
+        const email = ($('loginEmail').value || '').trim().toLowerCase(); const pass = $('loginPassword').value;
+        if (!window.UIBAuth) { $('loginMsg').innerHTML = '<span style="color:var(--red)">Sign-in is unavailable.</span>'; return; }
+        UIBMfa.signIn(email, pass, document.querySelector('#loginGate .login-card')).then((user) => {
+            $('loginPassword').value = '';
+            currentUser = (user.name && user.name !== 'Admin') ? user.name : 'Admin';
+            boot();
+        }).catch((err) => {
+            $('loginMsg').innerHTML = '<span style="color:var(--red)">' + esc(/invalid login credentials/i.test(String(err.message)) ? 'Incorrect email or password.' : (err.message || 'Sign-in failed.')) + '</span>';
+            $('loginPassword').value = '';
+        });
     }
     function signedInUser() {
-        try { return localStorage.getItem('uibCurrentUser') || sessionStorage.getItem('uibCurrentUser') || ''; } catch (e) { return ''; }
+        const u = (window.UIBAuth && UIBAuth.user()) || null;
+        return u ? ((u.name && u.name !== 'Admin') ? u.name : 'Admin') : '';
     }
 
     // ────────────────────────────────────────────────────────────
@@ -1271,7 +1332,7 @@
     function isStandalone() { return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true; }
     function isIOS() { return /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream; }
     function setupInstall() {
-        if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/rater-sw.js', { scope: '/rater' }).catch(() => {}); }
+        if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js').catch(() => {}); }
         window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredInstall = e; if (!isStandalone() && localStorage.getItem('raterInstallDismissed') !== '1') { $('installBanner').style.display = 'flex'; $('installBtn').style.display = ''; } });
         window.addEventListener('appinstalled', () => { deferredInstall = null; $('installBanner').style.display = 'none'; $('installBtn').style.display = 'none'; showSuccess('Auto Rater installed. Open it from your home screen.'); });
         if (isIOS() && !isStandalone() && localStorage.getItem('raterInstallDismissed') !== '1') { $('installBanner').style.display = 'flex'; $('installBtn').style.display = ''; }
@@ -1592,6 +1653,7 @@
             if (clean(c.firstName)) { quote.client.firstName = clean(c.firstName); filled.push('Client first name: ' + quote.client.firstName); }
             if (clean(c.middleName)) quote.client.middleName = clean(c.middleName).slice(0, 2).toUpperCase();
             if (clean(c.lastName)) { quote.client.lastName = clean(c.lastName); filled.push('Client last name: ' + quote.client.lastName); }
+            syncClientToDriver1();
             if (clean(c.address)) { quote.client.address = clean(c.address); quote.client.addressVerified = false; parseAddress(quote.client.address); filled.push('Client address: ' + quote.client.address + ' (press Verify)'); }
             if (clean(c.email)) { quote.client.email = clean(c.email); filled.push('Email: ' + quote.client.email); }
             if (clean(c.phone)) { const num = formatPhone(c.phone); if (!quote.client.phones[0].number) quote.client.phones[0].number = num; else quote.client.phones.push({ type: 'Mobile', number: num }); derivePhones(); filled.push('Phone: ' + num); }
@@ -1639,7 +1701,7 @@
 
     window.Rater = {
         showTab, newQuote, fillSample, saveQuote: () => saveQuote(false), rate, decodeVin, addDriver, removeDriver, addVehicle, removeVehicle,
-        editCarrier, closeCarrier, saveCarrier, deleteCarrier, toggleCarrier, carrierMethodChanged, exportCarriers, importCarriers, testCarrier, addStarterCarriers, setDemo,
+        editCarrier, closeCarrier, saveCarrier, deleteCarrier, toggleCarrier, carrierMethodChanged, exportCarriers, importCarriers, testCarrier, addStarterCarriers, addTurboRaterCarriers, togglePassword, setDemo,
         setManual, select, openPortal, copySummary, renderSaved, openSaved, duplicateSaved, deleteSaved, exportSaved, showKeys,
         login, install, dismissInstall, toggleDensity, verifyAddress, addPhone, removePhone, max: Max,
         get quote() { return quote; }, get results() { return results; }, get carriers() { return carriers; }

@@ -1,16 +1,79 @@
-// MAX by UIB — service worker: network first, cache fallback for the app shell.
-const CACHE = 'uib-max-standalone-v14';
-const SHELL = ['/', '/max.js?v=20261007m', '/manifest.webmanifest', '/privacy', '/icon.png', '/icons/rater-192.png', '/icons/rater-512.png', '/icons/rater-180.png'];
-const NEVER_CACHE = ['supabase.co', 'nhtsa.dot.gov'];
+// ============================================================
+//  UIB Auto Rater — service worker
+//  ------------------------------------------------------------
+//  Makes the rater installable on iPhone / Android and lets it
+//  open instantly (and offline) once it has been visited.
+//
+//  Strategy
+//    • App shell files: network first, fall back to cache
+//      (so a deploy is picked up on the next open, but the app
+//      still opens with no signal).
+//    • Supabase / carrier / lookup calls: never cached.
+//
+//  Bump CACHE whenever the shell files change in a way that
+//  must invalidate old copies.
+// ============================================================
+const CACHE = 'uib-rater-v40';
+const SHELL = [
+  '/',
+  '/index.html',
+  '/rater.js?v=20261013k',
+  '/uib-auth.js?v=20261015a',
+  '/uib-audit.js?v=20261013j',
+  '/uib-mfa.js?v=20261013e',
+  '/manifest.webmanifest',
+  '/uib-theme.css?v=20261003a',
+  '/uib-motion.js?v=20261002a',
+  '/lz-string.min.js',
+  '/storage-codec.js?v=20260914a',
+  '/supabase.js?v=20260916a',
+  '/icon.png',
+  '/icons/rater-192.png',
+  '/icons/rater-512.png',
+  '/icons/rater-180.png'
+];
+const CDN_OK = ['https://unpkg.com/', 'https://cdn.jsdelivr.net/', 'https://fonts.googleapis.com/', 'https://fonts.gstatic.com/'];
+const NEVER_CACHE = ['supabase.co', 'zippopotam.us', 'nhtsa.dot.gov'];
 
-self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => Promise.all(SHELL.map((u) => c.add(u).catch(() => null)))).then(() => self.skipWaiting())); });
-self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim())); });
-self.addEventListener('fetch', (e) => {
-  const req = e.request; if (req.method !== 'GET') return;
-  if (NEVER_CACHE.some((h) => req.url.includes(h))) return;
-  const sameOrigin = req.url.startsWith(self.location.origin);
-  const cdn = req.url.startsWith('https://fonts.googleapis.com/') || req.url.startsWith('https://fonts.gstatic.com/');
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE).then((cache) =>
+      Promise.all(SHELL.map((u) => cache.add(u).catch(() => null)))
+    ).then(() => self.skipWaiting())
+  );
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      .then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener('fetch', (event) => {
+  const req = event.request;
+  if (req.method !== 'GET') return;
+  const url = req.url;
+  if (NEVER_CACHE.some((h) => url.includes(h))) return;
+
+  const sameOrigin = url.startsWith(self.location.origin);
+  const cdn = CDN_OK.some((p) => url.startsWith(p));
   if (!sameOrigin && !cdn) return;
-  e.respondWith(fetch(req).then((res) => { if (res && (res.ok || res.type === 'opaque')) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {}); } return res; })
-    .catch(() => caches.match(req).then((hit) => hit || (req.mode === 'navigate' ? caches.match('/') : caches.match(req, { ignoreSearch: true })))));
+
+  event.respondWith(
+    fetch(req).then((res) => {
+      if (res && (res.ok || res.type === 'opaque')) {
+        const copy = res.clone();
+        caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
+      }
+      return res;
+    }).catch(() =>
+      caches.match(req, { ignoreSearch: false }).then((hit) => {
+        if (hit) return hit;
+        // Navigations fall back to the rater shell when offline.
+        if (req.mode === 'navigate') return caches.match('/index.html').then((r) => r || caches.match('/'));
+        return caches.match(req, { ignoreSearch: true });
+      })
+    )
+  );
 });

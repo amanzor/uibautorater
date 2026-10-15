@@ -26,12 +26,12 @@
     },
     {
       "source": "/privacy",
-      "destination": "https://uib-max.vercel.app/privacy",
+      "destination": "https://maxai-sable.vercel.app/privacy",
       "permanent": false
     },
     {
       "source": "/max.js",
-      "destination": "https://uib-max.vercel.app/max.js",
+      "destination": "https://maxai-sable.vercel.app/max.js",
       "permanent": false
     }
   ]
